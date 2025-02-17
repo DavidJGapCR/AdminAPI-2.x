@@ -59,8 +59,6 @@ services:
       OIDC_REQUIRE_METADATA: "${OIDC_REQUIRE_METADATA:-false}"
       OIDC_ENABLE_SERVER_CERTIFICATE: "${OIDC_ENABLE_SERVER_CERTIFICATE:-true}"
       AppSettings__EnableAdminConsoleAPI: "${ENABLE_ADMIN_CONSOLE_API:-false}"
-      AdminConsoleSettings__CorsSettings__EnableCors: "${ENABLE_CORS:-false}"
-      AdminConsoleSettings__CorsSettings__AllowedOrigins: "${ALLOWED_ORIGINS:-https://localhost}"
       ENABLE_CORS: "${ENABLE_CORS:-false}"
       ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-https://localhost}"
     volumes:
