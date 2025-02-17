@@ -43,7 +43,7 @@ services:
       ADMIN_API_VIRTUAL_NAME: ${ADMIN_API_VIRTUAL_NAME:-adminapi}
       AppSettings__DefaultPageSizeOffset: ${PAGING_OFFSET:-0}
       AppSettings__DefaultPageSizeLimit: ${PAGING_LIMIT:-25}
-      AppSettings__EnableAdminConsoleAPI: "${ENABLE_ADMIN_CONSOLE_API:-true}"
+      AppSettings__EnableAdminConsoleAPI: "${ENABLE_ADMIN_CONSOLE_API:-false}"
       MULTITENANCY_ENABLED: "${MULTITENANCY_ENABLED:-true}"
       AppSettings__PreventDuplicateApplications: "${PREVENT_DUPLICATE_APPLICATIONS:-false}"
       ASPNETCORE_ENVIRONMENT: "multitenantdocker"
