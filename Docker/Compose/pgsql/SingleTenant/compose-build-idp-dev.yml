@@ -7,7 +7,7 @@ services:
   nginx:
     build:
       context: ../../../Settings/gateway/
-      dockerfile: IDP.Dockerfile
+      dockerfile: Dockerfile_IDP
     environment:
       ADMIN_API_VIRTUAL_NAME: "${ADMIN_API_VIRTUAL_NAME:-adminapi}"
       ODS_VIRTUAL_NAME: "${ODS_VIRTUAL_NAME:-api}"
@@ -49,6 +49,8 @@ services:
       OIDC_AUTHORITY: "${OIDC_AUTHORITY:-http://ed-fi-keycloak:8080/auth/realms/myrealm}"
       OIDC_REQUIRE_METADATA: "${OIDC_REQUIRE_METADATA:-false}"
       OIDC_ENABLE_SERVER_CERTIFICATE: "${OIDC_ENABLE_SERVER_CERTIFICATE:-true}"
+      ENABLE_CORS: "${ENABLE_CORS:-false}"
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-https://localhost}"
     depends_on:
       - pb-admin
       - idp-keycloak
