@@ -22,5 +22,3 @@ public static class AdminConsoleConstants
 
     public const string TenantDocumentDescription = "Tenant Document as JSON object";
 }
-
-
