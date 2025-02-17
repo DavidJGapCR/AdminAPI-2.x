@@ -41,6 +41,9 @@ services:
       ISSUER_URL: ${ISSUER_URL}
       SIGNING_KEY: ${SIGNING_KEY}
       ADMIN_API_VIRTUAL_NAME: ${ADMIN_API_VIRTUAL_NAME:-adminapi}
+      AppSettings__DefaultPageSizeOffset: ${PAGING_OFFSET:-0}
+      AppSettings__DefaultPageSizeLimit: ${PAGING_LIMIT:-25}
+      AppSettings__EnableAdminConsoleAPI: "${ENABLE_ADMIN_CONSOLE_API:-true}"
       MULTITENANCY_ENABLED: "${MULTITENANCY_ENABLED:-false}"
       ENABLE_ADMIN_CONSOLE: ${ENABLE_ADMIN_CONSOLE:-true}
       USE_SELF_CONTAINED_AUTH: ${USE_SELF_CONTAINED_AUTH:-true}
