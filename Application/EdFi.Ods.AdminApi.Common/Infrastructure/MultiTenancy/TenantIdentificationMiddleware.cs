@@ -80,21 +80,21 @@ public class TenantResolverMiddleware : IMiddleware
                     ThrowTenantValidationError(validationErrorMessage);
                 }
             }
-            //else
-            //{
-            //    if (_options.Value.EnableAdminConsoleAPI)
-            //    {
-            //        if (!context.Request.Path.Value!.Contains("adminconsole/tenants") &&
-            //        context.Request.Method != "GET")
-            //        {
-            //            ThrowTenantValidationError("Tenant header is missing (adminconsole)");
-            //        }
-            //    }
-            //    else if (!NonFeatureEndpoints())
-            //    {
-            //        ThrowTenantValidationError("Tenant header is missing");
-            //    }
-            //}
+            else
+            {
+                if (_options.Value.EnableAdminConsoleAPI)
+                {
+                    if (!context.Request.Path.Value!.Contains("adminconsole/tenants") &&
+                    context.Request.Method != "GET")
+                    {
+                        ThrowTenantValidationError("Tenant header is missing (adminconsole)");
+                    }
+                }
+                else if (!NonFeatureEndpoints())
+                {
+                    ThrowTenantValidationError("Tenant header is missing");
+                }
+            }
         }
         await next.Invoke(context);
 
@@ -102,11 +102,11 @@ public class TenantResolverMiddleware : IMiddleware
             context.Request.Path.Value.Contains("swagger", StringComparison.InvariantCultureIgnoreCase)) ||
             context.Request.Headers.Referer.FirstOrDefault(x => x != null && x.ToLower().Contains("swagger", StringComparison.InvariantCultureIgnoreCase)) != null;
 
-        //bool NonFeatureEndpoints() => context.Request.Path.Value != null &&
-        //    (context.Request.Path.Value.Contains("health", StringComparison.InvariantCultureIgnoreCase)
-        //    || context.Request.Path.Value.Equals("/")
-        //    || (context.Request.PathBase.HasValue && !context.Request.Path.HasValue)
-        //    || (context.Request.Path.StartsWithSegments(new PathString("/.well-known"))));
+        bool NonFeatureEndpoints() => context.Request.Path.Value != null &&
+            (context.Request.Path.Value.Contains("health", StringComparison.InvariantCultureIgnoreCase)
+            || context.Request.Path.Value.Equals("/")
+            || (context.Request.PathBase.HasValue && !context.Request.Path.HasValue)
+            || (context.Request.Path.StartsWithSegments(new PathString("/.well-known"))));
 
         void ThrowTenantValidationError(string errorMessage)
         {
