@@ -87,7 +87,7 @@ public class TenantResolverMiddleware : IMiddleware
                     if (!context.Request.Path.Value!.Contains("adminconsole/tenants") &&
                     context.Request.Method != "GET")
                     {
-                        ThrowTenantValidationError("Tenant header is missing (adminconsole)");
+
                     }
                 }
                 else if (!NonFeatureEndpoints())
