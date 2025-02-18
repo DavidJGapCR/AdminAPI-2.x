@@ -45,7 +45,6 @@ services:
       AppSettings__DefaultPageSizeLimit: ${PAGING_LIMIT:-25}
       AppSettings__EnableAdminConsoleAPI: "${ENABLE_ADMIN_CONSOLE_API:-true}"
       MULTITENANCY_ENABLED: "${MULTITENANCY_ENABLED:-false}"
-      ENABLE_ADMIN_CONSOLE: ${ENABLE_ADMIN_CONSOLE:-true}
       USE_SELF_CONTAINED_AUTH: ${USE_SELF_CONTAINED_AUTH:-true}
       OIDC_AUTHORITY: "${OIDC_AUTHORITY:-http://ed-fi-keycloak:8080/auth/realms/myrealm}"
       OIDC_REQUIRE_METADATA: "${OIDC_REQUIRE_METADATA:-false}"
