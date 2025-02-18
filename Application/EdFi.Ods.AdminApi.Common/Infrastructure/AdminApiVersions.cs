@@ -24,19 +24,19 @@ public class AdminApiVersions
         if (_isInitialized)
             throw new InvalidOperationException("Versions are already initialized");
 
-        if (app.Configuration.GetValue<bool>("AppSettings:EnableAdminConsoleAPI"))
-        {
-            _versionSet = app.NewApiVersionSet()
-                .HasApiVersion(V2.Version)
-                .HasApiVersion(AdminConsole.Version)
-                .Build();
-        }
-        else
-        {
-            _versionSet = app.NewApiVersionSet()
-                .HasApiVersion(V2.Version)
-                .Build();
-        }
+        //if (app.Configuration.GetValue<bool>("AppSettings:EnableAdminConsoleAPI"))
+        //{
+        //    _versionSet = app.NewApiVersionSet()
+        //        .HasApiVersion(V2.Version)
+        //        .HasApiVersion(AdminConsole.Version)
+        //        .Build();
+        //}
+        //else
+        //{
+        _versionSet = app.NewApiVersionSet()
+            .HasApiVersion(V2.Version)
+            .Build();
+        //}
         _isInitialized = true;
     }
 
