@@ -31,7 +31,10 @@ services:
       additional_contexts:
         assets: ../../../../
       dockerfile: dev.pgsql.Dockerfile
+      args:
+        ADMIN_API_VERSION: "${ADMIN_API_VERSION:-2.2.0}"
     environment:
+      ADMIN_API_VERSION: ${ADMIN_API_VERSION}
       POSTGRES_PORT: 5432
       POSTGRES_USER: "${POSTGRES_USER}"
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
@@ -43,16 +46,18 @@ services:
       ADMIN_API_VIRTUAL_NAME: ${ADMIN_API_VIRTUAL_NAME:-adminapi}
       AppSettings__DefaultPageSizeOffset: ${PAGING_OFFSET:-0}
       AppSettings__DefaultPageSizeLimit: ${PAGING_LIMIT:-25}
-      MULTITENANCY_ENABLED: "${MULTITENANCY_ENABLED:-false}"
+      MULTITENANCY_ENABLED: "${MULTITENANCY_ENABLED:-true}"
       AppSettings__PreventDuplicateApplications: "${PREVENT_DUPLICATE_APPLICATIONS:-false}"
       ASPNETCORE_ENVIRONMENT: "multitenantdocker"
       ENABLE_ADMIN_CONSOLE: ${ENABLE_ADMIN_CONSOLE:-true}
       USE_SELF_CONTAINED_AUTH: ${USE_SELF_CONTAINED_AUTH:-true}
-      OIDC_AUTHORITY: "${OIDC_AUTHORITY:-http://ed-fi-keycloak:8080/auth/realms/myrealm}"
+      OIDC_AUTHORITY: "${OIDC_AUTHORITY:-http://ed-fi-idp-keycloak:8080/auth/realms/edfi-admin-console}"
       OIDC_REQUIRE_METADATA: "${OIDC_REQUIRE_METADATA:-false}"
       OIDC_ENABLE_SERVER_CERTIFICATE: "${OIDC_ENABLE_SERVER_CERTIFICATE:-true}"
       ENABLE_CORS: "${ENABLE_CORS:-false}"
       ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-https://localhost}"
+      EDFI_API_DISCOVERY_URL: "${EDFI_API_DISCOVERY_URL:-https://host.docker.internal/api/}"
+      AppSettings__IgnoresCertificateErrors: ${IGNORES_CERTIFICATE_ERRORS:-false}
     volumes:
       - ./appsettings.dockertemplate.json:/app/appsettings.dockertemplate.json
     entrypoint: ["/bin/sh"]
@@ -74,7 +79,10 @@ services:
       additional_contexts:
         assets: ../../../../
       dockerfile: dbadmin.Dockerfile
+      args:
+        ADMIN_API_VERSION: "${ADMIN_API_VERSION:-2.2.0}"
     environment:
+      ADMIN_API_VERSION: ${ADMIN_API_VERSION}
       POSTGRES_USER: "${POSTGRES_USER}"
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
     ports:
@@ -90,7 +98,10 @@ services:
       additional_contexts:
         assets: ../../../../
       dockerfile: dbadmin.Dockerfile
+      args:
+        ADMIN_API_VERSION: "${ADMIN_API_VERSION:-2.2.0}"
     environment:
+      ADMIN_API_VERSION: ${ADMIN_API_VERSION}
       POSTGRES_USER: "${POSTGRES_USER}"
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
     ports:

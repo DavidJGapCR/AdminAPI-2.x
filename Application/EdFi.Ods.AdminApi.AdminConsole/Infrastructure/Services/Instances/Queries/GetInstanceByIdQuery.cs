@@ -3,8 +3,6 @@
 // The Ed-Fi Alliance licenses this file to you under the Apache License, Version 2.0.
 // See the LICENSE and NOTICES files in the project root for more information.
 
-using System.Text.Json.Nodes;
-using EdFi.Ods.AdminApi.AdminConsole.Helpers;
 using EdFi.Ods.AdminApi.AdminConsole.Infrastructure.DataAccess.Models;
 using EdFi.Ods.AdminApi.AdminConsole.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -13,48 +11,22 @@ namespace EdFi.Ods.AdminApi.AdminConsole.Infrastructure.Services.Instances.Queri
 
 public interface IGetInstanceByIdQuery
 {
-    Task<Instance> Execute(int odsInstanceId);
+    Task<Instance?> Execute(int id);
 }
 
-public class GetInstanceByIdQuery : IGetInstanceByIdQuery
+public class GetInstanceByIdQuery(IQueriesRepository<Instance> instanceQuery) : IGetInstanceByIdQuery
 {
-    private readonly IQueriesRepository<Instance> _instanceQuery;
-    private readonly IEncryptionService _encryptionService;
-    private readonly string _encryptionKey;
+    private readonly IQueriesRepository<Instance> _instanceQuery = instanceQuery;
 
-    public GetInstanceByIdQuery(IQueriesRepository<Instance> instanceQuery, IEncryptionKeyResolver encryptionKeyResolver, IEncryptionService encryptionService)
+    public async Task<Instance?> Execute(int id)
     {
-        _instanceQuery = instanceQuery;
-        _encryptionKey = encryptionKeyResolver.GetEncryptionKey();
-        _encryptionService = encryptionService;
-    }
-
-    public async Task<Instance> Execute(int odsInstanceId)
-    {
-
-        var instance = await _instanceQuery.Query().SingleOrDefaultAsync(instance => instance.OdsInstanceId == odsInstanceId);
+        var instance = await _instanceQuery.Query()
+            .Include(i => i.OdsInstanceContexts)
+            .Include(i => i.OdsInstanceDerivatives)
+            .SingleOrDefaultAsync(instance => instance.Id == id);
 
         if (instance == null)
             return null;
-
-        JsonNode? jnDocument = JsonNode.Parse(instance.Document);
-
-        var encryptedClientId = jnDocument!["clientId"]?.AsValue().ToString();
-        var encryptedClientSecret = jnDocument!["clientSecret"]?.AsValue().ToString();
-
-        var clientId = string.Empty;
-        var clientSecret = string.Empty;
-
-        if (!string.IsNullOrEmpty(encryptedClientId) && !string.IsNullOrEmpty(encryptedClientSecret))
-        {
-            _encryptionService.TryDecrypt(encryptedClientId, _encryptionKey, out clientId);
-            _encryptionService.TryDecrypt(encryptedClientSecret, _encryptionKey, out clientSecret);
-
-            jnDocument!["clientId"] = clientId;
-            jnDocument!["clientSecret"] = clientSecret;
-        }
-
-        instance.Document = jnDocument!.ToJsonString();
 
         return instance;
     }

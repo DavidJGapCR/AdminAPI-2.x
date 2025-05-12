@@ -9,7 +9,6 @@ using EdFi.Ods.AdminApi.Common.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Caching.Memory;
-using Swashbuckle.AspNetCore.Filters;
 
 namespace EdFi.Ods.AdminApi.AdminConsole.Features.Tenants;
 
@@ -18,19 +17,19 @@ public class ReadTenants : IFeature
     public void MapEndpoints(IEndpointRouteBuilder endpoints)
     {
         AdminApiEndpointBuilder.MapGet(endpoints, "/tenants", GetTenantsAsync)
-           .BuildForVersions(AdminApiVersions.AdminConsole);
+            .BuildForVersions(AdminApiVersions.AdminConsole);
 
         AdminApiEndpointBuilder.MapGet(endpoints, "/tenants/{tenantId}", GetTenantsByTenantIdAsync)
            .BuildForVersions(AdminApiVersions.AdminConsole);
     }
 
-    public async Task<IResult> GetTenantsAsync(IAdminConsoleTenantsService adminConsoleTenantsService, IMemoryCache memoryCache)
+    public static async Task<IResult> GetTenantsAsync(IAdminConsoleTenantsService adminConsoleTenantsService, IMemoryCache memoryCache)
     {
         var tenants = await adminConsoleTenantsService.GetTenantsAsync(true);
         return Results.Ok(tenants);
     }
 
-    public async Task<IResult> GetTenantsByTenantIdAsync(IAdminConsoleTenantsService adminConsoleTenantsService,
+    public static async Task<IResult> GetTenantsByTenantIdAsync(IAdminConsoleTenantsService adminConsoleTenantsService,
         IMemoryCache memoryCache, int tenantId)
     {
         var tenant = await adminConsoleTenantsService.GetTenantByTenantIdAsync(tenantId);

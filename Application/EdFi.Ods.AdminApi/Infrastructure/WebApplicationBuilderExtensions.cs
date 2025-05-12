@@ -8,8 +8,10 @@ using EdFi.Admin.DataAccess.Contexts;
 using EdFi.Common.Extensions;
 using EdFi.Ods.AdminApi.Common.Infrastructure;
 using EdFi.Ods.AdminApi.Common.Infrastructure.Context;
+using EdFi.Ods.AdminApi.Common.Infrastructure.Database;
 using EdFi.Ods.AdminApi.Common.Infrastructure.Extensions;
 using EdFi.Ods.AdminApi.Common.Infrastructure.MultiTenancy;
+using EdFi.Ods.AdminApi.Common.Infrastructure.Security;
 using EdFi.Ods.AdminApi.Common.Settings;
 using EdFi.Ods.AdminApi.Infrastructure.Api;
 using EdFi.Ods.AdminApi.Infrastructure.Documentation;
@@ -27,9 +29,11 @@ namespace EdFi.Ods.AdminApi.Infrastructure;
 
 public static class WebApplicationBuilderExtensions
 {
+    private static readonly string[] _value = ["api"];
+
     public static void AddServices(this WebApplicationBuilder webApplicationBuilder)
     {
-        IConfiguration config = webApplicationBuilder.Configuration;
+        ConfigurationManager config = webApplicationBuilder.Configuration;
         webApplicationBuilder.Services.Configure<AppSettings>(config.GetSection("AppSettings"));
         EnableMultiTenancySupport(webApplicationBuilder);
         var executingAssembly = Assembly.GetExecutingAssembly();
@@ -104,10 +108,9 @@ public static class WebApplicationBuilderExtensions
                         ClientCredentials = new OpenApiOAuthFlow
                         {
                             TokenUrl = new Uri($"{issuer}/{SecurityConstants.TokenEndpoint}"),
-                            Scopes = new Dictionary<string, string>
-                            {
-                                { SecurityConstants.Scopes.AdminApiFullAccess, "Unrestricted access to all Admin API endpoints" },
-                            }
+                            Scopes = SecurityConstants.Scopes.AllScopes.ToDictionary(
+                                x => x.Scope,
+                                x => x.ScopeDescription),
                         },
                     },
                     In = ParameterLocation.Header,
@@ -124,8 +127,7 @@ public static class WebApplicationBuilderExtensions
                             Reference = new OpenApiReference
                                 { Type = ReferenceType.SecurityScheme, Id = "oauth" },
                         },
-                        new[] { "api" }
-                    }
+_value }
                 }
             );
 
@@ -214,7 +216,7 @@ public static class WebApplicationBuilderExtensions
                 sp => new PostgresSecurityContext(SecurityDbContextOptions(sp, DatabaseEngineEnum.PostgreSql)));
 
             webApplicationBuilder.Services.AddScoped<IUsersContext>(
-                sp => new PostgresUsersContext(AdminDbContextOptions(sp, DatabaseEngineEnum.PostgreSql)));
+                sp => new AdminConsolePostgresUsersContext(AdminDbContextOptions(sp, DatabaseEngineEnum.PostgreSql)));
         }
         else if (DatabaseEngineEnum.Parse(databaseEngine).Equals(DatabaseEngineEnum.SqlServer))
         {
@@ -229,7 +231,7 @@ public static class WebApplicationBuilderExtensions
                 (sp) => new SqlServerSecurityContext(SecurityDbContextOptions(sp, DatabaseEngineEnum.SqlServer)));
 
             webApplicationBuilder.Services.AddScoped<IUsersContext>(
-                (sp) => new SqlServerUsersContext(AdminDbContextOptions(sp, DatabaseEngineEnum.SqlServer)));
+                (sp) => new AdminConsoleSqlServerUsersContext(AdminDbContextOptions(sp, DatabaseEngineEnum.SqlServer)));
         }
         else
         {

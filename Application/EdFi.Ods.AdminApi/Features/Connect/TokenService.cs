@@ -6,6 +6,7 @@
 using System.Security.Authentication;
 using System.Security.Claims;
 using EdFi.Ods.AdminApi.Common.Infrastructure.ErrorHandling;
+using EdFi.Ods.AdminApi.Common.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using OpenIddict.Abstractions;
 
@@ -16,16 +17,11 @@ public interface ITokenService
     Task<ClaimsPrincipal> Handle(OpenIddictRequest request);
 }
 
-public class TokenService : ITokenService
+public class TokenService(IOpenIddictApplicationManager applicationManager, IConfiguration configuration) : ITokenService
 {
-    private readonly IOpenIddictApplicationManager _applicationManager;
-
+    private readonly IOpenIddictApplicationManager _applicationManager = applicationManager;
+    private readonly IConfiguration _configuration = configuration;
     private const string DENIED_AUTHENTICATION_MESSAGE = "Access Denied. Please review your information and try again.";
-
-    public TokenService(IOpenIddictApplicationManager applicationManager)
-    {
-        _applicationManager = applicationManager;
-    }
 
     public async Task<ClaimsPrincipal> Handle(OpenIddictRequest request)
     {
@@ -49,18 +45,26 @@ public class TokenService : ITokenService
             .ToList();
 
         var missingScopes = requestedScopes.Where(s => !appScopes.Contains(s)).ToList();
-        if (missingScopes.Any())
+        if (missingScopes.Count != 0)
             throw new AuthenticationException(DENIED_AUTHENTICATION_MESSAGE);
 
         var displayName = await _applicationManager.GetDisplayNameAsync(application);
-
         var identity = new ClaimsIdentity(JwtBearerDefaults.AuthenticationScheme);
         identity.AddClaim(OpenIddictConstants.Claims.Subject, request.ClientId!, OpenIddictConstants.Destinations.AccessToken);
         identity.AddClaim(OpenIddictConstants.Claims.Name, displayName!, OpenIddictConstants.Destinations.AccessToken);
-
+        var roles = Roles.AllRoles.Select(obj => obj.RoleName).ToList();
+        var defaultRoleClaim = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role";
+        var rolesClaim = _configuration?.GetValue<string>("AppSettings:RoleClaimAttribute") ?? defaultRoleClaim;
+        foreach (var role in roles)
+        {
+            identity.AddClaim(new Claim(rolesClaim, role, OpenIddictConstants.Destinations.AccessToken));
+        }
         var principal = new ClaimsPrincipal(identity);
         principal.SetScopes(requestedScopes);
-
+        foreach (var claim in principal.Claims)
+        {
+            claim.SetDestinations(OpenIddictConstants.Destinations.AccessToken);
+        }
         return principal;
     }
 }

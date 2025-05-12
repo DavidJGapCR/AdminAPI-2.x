@@ -3,8 +3,6 @@
 // The Ed-Fi Alliance licenses this file to you under the Apache License, Version 2.0.
 // See the LICENSE and NOTICES files in the project root for more information.
 
-using System.Text.Json.Nodes;
-using EdFi.Ods.AdminApi.AdminConsole.Helpers;
 using EdFi.Ods.AdminApi.AdminConsole.Infrastructure.DataAccess.Models;
 using EdFi.Ods.AdminApi.AdminConsole.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -16,14 +14,9 @@ public interface IGetStepsByTenantIdQuery
     Task<IEnumerable<Step>> Execute(int docId);
 }
 
-public class GetStepsByTenantIdQuery : IGetStepsByTenantIdQuery
+public class GetStepsByTenantIdQuery(IQueriesRepository<Step> stepQuery) : IGetStepsByTenantIdQuery
 {
-    private readonly IQueriesRepository<Step> _stepQuery;
-
-    public GetStepsByTenantIdQuery(IQueriesRepository<Step> stepQuery, IEncryptionKeyResolver encryptionKeyResolver, IEncryptionService encryptionService)
-    {
-        _stepQuery = stepQuery;
-    }
+    private readonly IQueriesRepository<Step> _stepQuery = stepQuery;
 
     public async Task<IEnumerable<Step>> Execute(int docId)
     {

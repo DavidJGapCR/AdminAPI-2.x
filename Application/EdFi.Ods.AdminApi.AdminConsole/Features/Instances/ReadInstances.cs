@@ -3,10 +3,7 @@
 // The Ed-Fi Alliance licenses this file to you under the Apache License, Version 2.0.
 // See the LICENSE and NOTICES files in the project root for more information.
 
-using System.Linq;
-using System.Net.Http.Json;
-using System.Text.Json;
-using EdFi.Ods.AdminApi.AdminConsole.Infrastructure.DataAccess.Models;
+using AutoMapper;
 using EdFi.Ods.AdminApi.AdminConsole.Infrastructure.Services.Instances.Queries;
 using EdFi.Ods.AdminApi.Common.Features;
 using EdFi.Ods.AdminApi.Common.Infrastructure;
@@ -20,27 +17,29 @@ public class ReadInstances : IFeature
 {
     public void MapEndpoints(IEndpointRouteBuilder endpoints)
     {
-        AdminApiEndpointBuilder.MapGet(endpoints, "/instances", GetInstances)
+        AdminApiEndpointBuilder.MapGet(endpoints, "/odsInstances", GetInstances)
             .BuildForVersions(AdminApiVersions.AdminConsole);
 
-        AdminApiEndpointBuilder.MapGet(endpoints, "/instances/{odsinstanceid}", GetInstanceById)
+        AdminApiEndpointBuilder.MapGet(endpoints, "/odsInstances/{id}", GetInstanceById)
             .WithRouteOptions(b => b.WithResponse<InstanceModel>(200))
             .BuildForVersions(AdminApiVersions.AdminConsole);
     }
 
-    internal async Task<IResult> GetInstances([FromServices] IGetInstancesQuery getInstancesQuery)
+    internal static async Task<IResult> GetInstances(IMapper mapper, [FromServices] IGetInstancesQuery getInstancesQuery, string? status)
     {
-        var instances = await getInstancesQuery.Execute();
-        return Results.Ok(instances);
+        var instances = await getInstancesQuery.Execute(status: status);
+        var instanceModels = mapper.Map<List<InstanceModel>>(instances);
+        return Results.Ok(instanceModels);
     }
 
-    internal async Task<IResult> GetInstanceById([FromServices] IGetInstanceByIdQuery getInstanceQuery, int odsInstanceId)
+    internal static async Task<IResult> GetInstanceById(IMapper mapper, [FromServices] IGetInstanceByIdQuery getInstanceByIdQuery, int Id)
     {
-        var instance = await getInstanceQuery.Execute(odsInstanceId);
-
+        var instance = await getInstanceByIdQuery.Execute(Id);
         if (instance != null)
-            return Results.Ok(instance);
-
+        {
+            var model = mapper.Map<InstanceModel>(instance);
+            return Results.Ok(model);
+        }
         return Results.NotFound();
     }
 }

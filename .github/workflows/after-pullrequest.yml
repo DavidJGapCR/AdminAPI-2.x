@@ -22,7 +22,6 @@ jobs:
     permissions:
       checks: write
       pull-requests: write
-      # actions: read
       # only needed for private repository
       # contents: read
       # issues: read

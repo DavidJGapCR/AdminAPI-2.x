@@ -44,12 +44,8 @@ jobs:
       - name: Checkout the Repo
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
-      - name: Build
-        run: ./build.ps1 -Command Build -Configuration Debug
-
-      - name: Run Unit Tests
-        if: success()
-        run: ./build.ps1 -Command UnitTest -Configuration Debug
+      - name: Build and Test
+        run: ./build.ps1 -Command BuildAndTest -Configuration Debug
 
       - name: Upload Test Results
         uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0

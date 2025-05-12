@@ -3,8 +3,6 @@
 // The Ed-Fi Alliance licenses this file to you under the Apache License, Version 2.0.
 // See the LICENSE and NOTICES files in the project root for more information.
 
-using System.Text.Json.Nodes;
-using EdFi.Ods.AdminApi.AdminConsole.Helpers;
 using EdFi.Ods.AdminApi.AdminConsole.Infrastructure.DataAccess.Models;
 using EdFi.Ods.AdminApi.AdminConsole.Infrastructure.Repositories;
 
@@ -12,23 +10,14 @@ namespace EdFi.Ods.AdminApi.AdminConsole.Infrastructure.Services.Permissions.Com
 
 public interface IAddPermissionCommand
 {
-    Task<Permission> Execute(IAddPermissionModel permission);
+    Task<Permission?> Execute(IAddPermissionModel permission);
 }
 
-public class AddPermissionCommand : IAddPermissionCommand
+public class AddPermissionCommand(ICommandRepository<Permission> permissionCommand) : IAddPermissionCommand
 {
-    private readonly ICommandRepository<Permission> _permissionCommand;
-    private readonly IEncryptionService _encryptionService;
-    private readonly string _encryptionKey;
+    private readonly ICommandRepository<Permission> _permissionCommand = permissionCommand;
 
-    public AddPermissionCommand(ICommandRepository<Permission> permissionCommand, IEncryptionKeyResolver encryptionKeyResolver, IEncryptionService encryptionService)
-    {
-        _permissionCommand = permissionCommand;
-        _encryptionKey = encryptionKeyResolver.GetEncryptionKey();
-        _encryptionService = encryptionService;
-    }
-
-    public async Task<Permission> Execute(IAddPermissionModel permission)
+    public async Task<Permission?> Execute(IAddPermissionModel permission)
     {
         try
         {

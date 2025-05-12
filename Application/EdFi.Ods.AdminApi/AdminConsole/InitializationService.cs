@@ -69,7 +69,8 @@ public class InitializationService : IAdminConsoleInitializationService
             var result = command.Execute(newApplication, _options);
             applicationId = result.ApplicationId;
         }
-        else {
+        else
+        {
             applicationId = adminConsoleApplication.ApplicationId;
         }
         return Task.FromResult(applicationId);
@@ -85,9 +86,9 @@ public class InitializationService : IAdminConsoleInitializationService
         IAddVendorModel vendor = new AddVendorRequest
         {
             Company = vendorCompany,
-            NamespacePrefixes = vendorContactEmailAddress,
+            NamespacePrefixes = vendorNamespacePrefixes,
             ContactName = vendorContactName,
-            ContactEmailAddress = vendorNamespacePrefixes
+            ContactEmailAddress = vendorContactEmailAddress
         };
         return command.Execute(vendor);
     }

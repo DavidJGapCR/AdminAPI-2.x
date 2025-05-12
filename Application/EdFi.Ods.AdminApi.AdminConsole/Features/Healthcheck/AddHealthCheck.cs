@@ -9,6 +9,7 @@ using EdFi.Ods.AdminApi.Common.Features;
 using EdFi.Ods.AdminApi.Common.Infrastructure;
 using FluentValidation;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Newtonsoft.Json;
 using Swashbuckle.AspNetCore.Annotations;
@@ -19,14 +20,17 @@ public class AddHealthCheck : IFeature
     public void MapEndpoints(IEndpointRouteBuilder endpoints)
     {
         AdminApiEndpointBuilder.MapPost(endpoints, "/healthcheck", Execute)
-      .WithRouteOptions(b => b.WithResponseCode(201))
-      .BuildForVersions(AdminApiVersions.AdminConsole);
+          .WithRouteOptions(b => b.WithResponseCode(201))
+          .BuildForVersions(AdminApiVersions.AdminConsole);
     }
 
-    public async Task<IResult> Execute(Validator validator, IAddHealthCheckCommand addHealthCheckCommand, AddHealthCheckRequest request)
+    public static async Task<IResult> Execute(Validator validator, IAddHealthCheckCommand addHealthCheckCommand, [FromBody] AddHealthCheckRequest request)
     {
         await validator.GuardAsync(request);
         var addedHealthCheck = await addHealthCheckCommand.Execute(request);
+        if (addedHealthCheck == null)
+            return Results.Ok();
+
         return Results.Created($"/healthcheck/{addedHealthCheck.DocId}", null);
     }
 
@@ -42,7 +46,7 @@ public class AddHealthCheck : IFeature
         [Required]
         public int TenantId { get; set; }
         [Required]
-        public string Document { get; set; }
+        public string Document { get; set; } = string.Empty;
     }
 
     public class Validator : AbstractValidator<AddHealthCheckRequest>
@@ -63,7 +67,7 @@ public class AddHealthCheck : IFeature
                  .Must(BeValidDocument).WithMessage("Document must be a valid JSON.");
         }
 
-        private bool BeValidDocument(string document)
+        private static bool BeValidDocument(string document)
         {
             try
             {

@@ -6,6 +6,7 @@
 using EdFi.Ods.AdminApi.AdminConsole.Infrastructure.DataAccess.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace EdFi.Ods.AdminApi.AdminConsole.Infrastructure.DataAccess.Contexts;
 
@@ -14,6 +15,10 @@ public interface IDbContext
     DbSet<HealthCheck> HealthChecks { get; set; }
 
     DbSet<Instance> Instances { get; set; }
+
+    DbSet<OdsInstanceContext> OdsInstanceContexts { get; set; }
+
+    DbSet<OdsInstanceDerivative> OdsInstanceDerivatives { get; set; }
 
     DbSet<Permission> Permissions { get; set; }
 
@@ -24,4 +29,9 @@ public interface IDbContext
     DatabaseFacade DB { get; }
     DbSet<T> Set<T>() where T : class;
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    IDbContextTransaction BeginTransaction();
+    void CommitTransaction();
+    void RollbackTransaction();
+    void DisposeTransaction();
 }

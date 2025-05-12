@@ -3,13 +3,13 @@
 // The Ed-Fi Alliance licenses this file to you under the Apache License, Version 2.0.
 // See the LICENSE and NOTICES files in the project root for more information.
 
-using EdFi.Ods.AdminApi.Common.Helpers;
-using Swashbuckle.AspNetCore.Annotations;
+using System.Data;
 using EdFi.Ods.AdminApi.Common.Features;
-using EdFi.Ods.AdminApi.Common.Infrastructure;
+using EdFi.Ods.AdminApi.Common.Infrastructure.Extensions;
+using EdFi.Ods.AdminApi.Common.Infrastructure.Security;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
-using EdFi.Ods.AdminApi.Common.Infrastructure.Extensions;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace EdFi.Ods.AdminApi.Common.Infrastructure;
 
@@ -29,9 +29,10 @@ public class AdminApiEndpointBuilder
     private readonly HttpVerb? _verb;
     private readonly string _route;
     private readonly Delegate? _handler;
-    private readonly List<Action<RouteHandlerBuilder>> _routeOptions = new();
+    private readonly List<Action<RouteHandlerBuilder>> _routeOptions = [];
     private readonly string _pluralResourceName;
     private bool _allowAnonymous = false;
+    private IEnumerable<string> _authorizationPolicies = [];
 
     public static AdminApiEndpointBuilder MapGet(IEndpointRouteBuilder endpoints, string route, Delegate handler)
         => new(endpoints, HttpVerb.GET, route, handler);
@@ -48,10 +49,33 @@ public class AdminApiEndpointBuilder
     public static AdminApiEndpointBuilder MapDelete(IEndpointRouteBuilder endpoints, string route, Delegate handler)
         => new(endpoints, HttpVerb.DELETE, route, handler);
 
+    /// <summary>
+    /// Includes the specified authorization policy in the endpoint.
+    /// </summary>
+    /// <param name="authorizationPolicies">List of authorization Policies to validate</param>
+    /// <returns></returns>
+    public AdminApiEndpointBuilder RequireAuthorization(IEnumerable<PolicyDefinition> authorizationPolicies)
+    {
+        _authorizationPolicies = authorizationPolicies.Select(policy => policy.PolicyName).ToList();
+        return this;
+    }
+
+    /// <summary>
+    /// Includes the specified authorization policy in the endpoint.
+    /// </summary>
+    /// <param name="authorizationPolicies">List of authorization Policies to validate</param>
+    /// <returns></returns>
+    public AdminApiEndpointBuilder RequireAuthorization(PolicyDefinition authorizationPolicies)
+    {
+        _authorizationPolicies = [authorizationPolicies.PolicyName];
+        return this;
+    }
+
     public void BuildForVersions(params AdminApiVersions.AdminApiVersion[] versions)
     {
         BuildForVersions(string.Empty, versions);
     }
+
     public void BuildForVersions(string authorizationPolicy, params AdminApiVersions.AdminApiVersion[] versions)
     {
         if (versions.Length == 0)
@@ -84,7 +108,19 @@ public class AdminApiEndpointBuilder
             }
             else
             {
-                if (string.IsNullOrWhiteSpace(authorizationPolicy))
+                var rolesPolicy = new List<PolicyDefinition> { VersionRoleMapping.DefaultRolePolicy };
+
+                if (VersionRoleMapping.RolesByVersion.TryGetValue(version, out var defaultPolicies))
+                {
+                    rolesPolicy.Add(defaultPolicies);
+                }
+                builder.RequireAuthorization(rolesPolicy.Select(policy => policy.PolicyName).ToArray());
+
+                if (_authorizationPolicies.Any())
+                {
+                    builder.RequireAuthorization(_authorizationPolicies.ToArray());
+                }
+                else if (!string.IsNullOrWhiteSpace(authorizationPolicy))
                 {
                     builder.RequireAuthorization(authorizationPolicy);
                 }

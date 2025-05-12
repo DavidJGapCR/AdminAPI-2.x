@@ -7,7 +7,7 @@ services:
   nginx:
     build:
       context: ../../../Settings/gateway/
-      dockerfile: Dockerfile_IDP
+      dockerfile: IDP.Dockerfile
     environment:
       ADMIN_API_VIRTUAL_NAME: "${ADMIN_API_VIRTUAL_NAME:-adminapi}"
       ODS_VIRTUAL_NAME: "${ODS_VIRTUAL_NAME:-api}"
@@ -57,11 +57,13 @@ services:
       DEFAULT_TENANT: ${DEFAULT_TENANT:-tenant2}
       ENABLE_ADMIN_CONSOLE: ${ENABLE_ADMIN_CONSOLE:-true}
       USE_SELF_CONTAINED_AUTH: ${USE_SELF_CONTAINED_AUTH:-true}
-      OIDC_AUTHORITY: "${OIDC_AUTHORITY:-http://ed-fi-keycloak:8080/auth/realms/myrealm}"
+      OIDC_AUTHORITY: "${OIDC_AUTHORITY:-http://ed-fi-idp-keycloak:8080/auth/realms/edfi-admin-console}"
       OIDC_REQUIRE_METADATA: "${OIDC_REQUIRE_METADATA:-false}"
       OIDC_ENABLE_SERVER_CERTIFICATE: "${OIDC_ENABLE_SERVER_CERTIFICATE:-true}"
       ENABLE_CORS: "${ENABLE_CORS:-false}"
       ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-https://localhost}"
+      EDFI_API_DISCOVERY_URL: "${EDFI_API_DISCOVERY_URL:-https://host.docker.internal/api/}"
+      AppSettings__IgnoresCertificateErrors: ${IGNORES_CERTIFICATE_ERRORS:-false}
     volumes:
       - ./appsettings.dockertemplate.json:/app/appsettings.dockertemplate.json
     entrypoint: ["/bin/sh"]
@@ -82,7 +84,10 @@ services:
     build:
       context: ../../../Settings/DB-Admin/mssql/
       dockerfile: Dockerfile
+      args:
+        ADMIN_API_VERSION: "${ADMIN_API_VERSION:-2.2.0}"
     environment:
+      ADMIN_API_VERSION: ${ADMIN_API_VERSION}
       SA_PASSWORD: "${SA_PASSWORD:-P@55w0rd}"
       ACCEPT_EULA: "Y"
       SQLSERVER_ADMIN_DATASOURCE: db-admin
@@ -106,7 +111,10 @@ services:
     build:
       context: ../../../Settings/DB-Admin/mssql/
       dockerfile: Dockerfile
+      args:
+        ADMIN_API_VERSION: "${ADMIN_API_VERSION:-2.2.0}"
     environment:
+      ADMIN_API_VERSION: ${ADMIN_API_VERSION}
       SA_PASSWORD: "${SA_PASSWORD:-P@55w0rd}"
       ACCEPT_EULA: "Y"
       SQLSERVER_ADMIN_DATASOURCE: db-admin
@@ -156,7 +164,7 @@ services:
     volumes:
       - ../../../Settings/ssl:/ssl/
       - ../../../KeyCloak/realm-and-users.json:/opt/keycloak/data/import/realm-and-users.json
-    container_name: ed-fi-keycloak
+    container_name: ed-fi-idp-keycloak
 
   db-idp-keycloak:
     image: postgres:${KEYCLOAK_DB_IMAGE_TAG:-16.2}

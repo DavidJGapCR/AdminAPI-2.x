@@ -5,6 +5,7 @@
 
 using EdFi.Ods.AdminApi.Common.Infrastructure.ErrorHandling;
 using EdFi.Ods.AdminApi.Common.Infrastructure.Extensions;
+using EdFi.Ods.AdminApi.Common.Infrastructure.Security;
 using EdFi.Ods.AdminApi.Features.Connect;
 using EdFi.Ods.AdminApi.Infrastructure.Documentation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -35,7 +36,7 @@ public static class SecurityExtensions
         var signingKey = string.IsNullOrEmpty(signingKeyValue)
             ? null
             : new SymmetricSecurityKey(Convert.FromBase64String(signingKeyValue));
-
+        var validateIssuerSigningKey = configuration.Get<bool>("Authentication:ValidateIssuerSigningKey");
         services
             .AddOpenIddict()
             .AddCore(opt =>
@@ -63,8 +64,10 @@ public static class SecurityExtensions
                     }
                     opt.AddSigningKey(signingKey);
                 }
-
-                opt.RegisterScopes(SecurityConstants.Scopes.AdminApiFullAccess);
+                foreach (var scope in SecurityConstants.Scopes.AllScopes)
+                {
+                    opt.RegisterScopes(scope.Scope);
+                }
                 var aspNetCoreBuilder = opt.UseAspNetCore().EnableTokenEndpointPassthrough();
                 if (isDockerEnvironment)
                 {
@@ -101,8 +104,9 @@ public static class SecurityExtensions
                 {
                     ValidateAudience = false,
                     ValidateIssuer = true,
-                    ValidateIssuerSigningKey = true,
+                    ValidateIssuerSigningKey = validateIssuerSigningKey,
                     ValidIssuer = issuer,
+                    RoleClaimType = "realm_access.roles",
                     IssuerSigningKey = signingKey
                 };
                 opt.RequireHttpsMetadata = !isDockerEnvironment;
@@ -110,7 +114,7 @@ public static class SecurityExtensions
             .AddJwtBearer("IdentityProvider", options =>
             {
                 var oidcIssuer = configuration.Get<string>("Authentication:OIDC:Authority");
-                if (!String.IsNullOrEmpty(oidcIssuer))
+                if (!string.IsNullOrEmpty(oidcIssuer))
                 {
                     var oidcValidationCallback = configuration.Get<bool>("Authentication:OIDC:EnableServerCertificateCustomValidationCallback");
                     var requireHttpsMetadata = configuration.Get<bool>("Authentication:OIDC:RequireHttpsMetadata");
@@ -121,16 +125,15 @@ public static class SecurityExtensions
                     {
                         ValidateAudience = false,
                         ValidateIssuer = true,
-                        ValidateIssuerSigningKey = false,
+                        ValidateIssuerSigningKey = validateIssuerSigningKey,
                         ValidIssuer = oidcIssuer,
+                        RoleClaimType = "realm_access.roles",
                         IssuerSigningKeyResolver = (token, securityToken, kid, parameters) =>
                         {
-#pragma warning disable S4830 // Server certificates should be verified during SSL/TLS connections
                             var handler = new HttpClientHandler
                             {
                                 ServerCertificateCustomValidationCallback = (request, cert, chain, errors) => oidcValidationCallback
                             };
-#pragma warning restore S4830
                             // Server certificates should be verified during SSL/TLS connections
                             // Get public keys from keycloak
                             var client = new HttpClient(handler);
@@ -147,7 +150,7 @@ public static class SecurityExtensions
             authenticationBuilder.AddJwtBearer(options =>
             {
                 var oidcIssuer = configuration.Get<string>("Authentication:OIDC:Authority");
-                if (!String.IsNullOrEmpty(oidcIssuer))
+                if (!string.IsNullOrEmpty(oidcIssuer))
                 {
                     var oidcValidationCallback = configuration.Get<bool>("Authentication:OIDC:EnableServerCertificateCustomValidationCallback");
                     var requireHttpsMetadata = configuration.Get<bool>("Authentication:OIDC:RequireHttpsMetadata");
@@ -158,20 +161,18 @@ public static class SecurityExtensions
                     {
                         ValidateAudience = false,
                         ValidateIssuer = configuration.Get<bool>("Authentication:OIDC:ValidateIssuer"),
-                        ValidateIssuerSigningKey = false,
+                        ValidateIssuerSigningKey = validateIssuerSigningKey,
                         ValidIssuer = oidcIssuer,
+                        RoleClaimType = "realm_access.roles",
                         IssuerSigningKeyResolver = (token, securityToken, kid, parameters) =>
                         {
-#pragma warning disable S4830 // Server certificates should be verified during SSL/TLS connections
                             var handler = new HttpClientHandler
                             {
                                 ServerCertificateCustomValidationCallback = (request, cert, chain, errors) => oidcValidationCallback
                             };
-#pragma warning restore S4830
                             // Server certificates should be verified during SSL/TLS connections
                             // Get public keys from keycloak
                             var client = new HttpClient(handler);
-                            Console.WriteLine("Issuer" + oidcIssuer);
                             var response = client.GetStringAsync(oidcIssuer + "/protocol/openid-connect/certs").Result;
                             var keys = JsonWebKeySet.Create(response).GetSigningKeys();
                             return keys;
@@ -181,21 +182,47 @@ public static class SecurityExtensions
             });
         }
 
-
         services.AddAuthorization(opt =>
         {
             opt.DefaultPolicy = new AuthorizationPolicyBuilder()
             .AddAuthenticationSchemes()
                 .RequireAssertion(context =>
-                        context.User.HasClaim(c => c.Type == OpenIddictConstants.Claims.Scope && c.Value.Contains(SecurityConstants.Scopes.AdminApiFullAccess))
+                        !context.HasSucceeded
+                        && context.User.HasClaim(c
+                            => c.Type == OpenIddictConstants.Claims.Scope
+                            && c.Value.Split(' ')
+                            .ToList()
+                            .Exists(scopeValue
+                                => string.Equals(scopeValue, AuthorizationPolicies.DefaultScopePolicy.Scope, StringComparison.OrdinalIgnoreCase)
+                            )
+                        )
                     )
                 .Build();
-            // Policy for Admin role
-            opt.AddPolicy("RequireAdminApiFullAccess", policy =>
+            foreach (var policy in AuthorizationPolicies.RolePolicies)
+            {
+                opt.AddPolicy(policy.PolicyName, policyBuilder =>
+                    policyBuilder.Requirements.Add(policy.RolesAuthorizationRequirement));
+            }
+            foreach (var scope in AuthorizationPolicies.ScopePolicies)
+            {
+                opt.AddPolicy(scope.PolicyName, policy =>
+                {
                     policy.RequireAssertion(context =>
-                        context.User.HasClaim(c => c.Type == OpenIddictConstants.Claims.Scope && c.Value == SecurityConstants.Scopes.AdminApiFullAccess))
-            .AddAuthenticationSchemes("Local", "IdentityProvider"));
+                        context.User.HasClaim(c
+                        => c.Type == OpenIddictConstants.Claims.Scope
+                        && c.Value.Split(' ')
+                            .ToList()
+                            .Exists(scopeValue
+                                => string.Equals(scopeValue, scope.Scope, StringComparison.OrdinalIgnoreCase)
+                                    || string.Equals(scopeValue, AuthorizationPolicies.DefaultScopePolicy.Scope, StringComparison.OrdinalIgnoreCase)
+                            )
+                    ));
+                });
+            }
+
+
         });
+        services.AddSingleton<IAuthorizationHandler, RolesAuthorizationHandler>();
         // Controllers to hide from Swagger conditionally
         var controllerNamesToHide = new List<string> { "ConnectController" };
         //Security Endpoints

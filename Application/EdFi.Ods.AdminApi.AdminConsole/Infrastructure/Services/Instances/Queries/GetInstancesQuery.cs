@@ -3,56 +3,42 @@
 // The Ed-Fi Alliance licenses this file to you under the Apache License, Version 2.0.
 // See the LICENSE and NOTICES files in the project root for more information.
 
-using System.Text.Json.Nodes;
-using EdFi.Ods.AdminApi.AdminConsole.Helpers;
 using EdFi.Ods.AdminApi.AdminConsole.Infrastructure.DataAccess.Models;
 using EdFi.Ods.AdminApi.AdminConsole.Infrastructure.Repositories;
+using Microsoft.EntityFrameworkCore;
 
 namespace EdFi.Ods.AdminApi.AdminConsole.Infrastructure.Services.Instances.Queries;
 
 public interface IGetInstancesQuery
 {
-    Task<IEnumerable<Instance>> Execute();
+    Task<IEnumerable<Instance>> Execute(string? tenantName = null, string? status = null);
 }
 
-public class GetInstancesQuery : IGetInstancesQuery
+public class GetInstancesQuery(IQueriesRepository<Instance> instanceQuery) : IGetInstancesQuery
 {
-    private readonly IQueriesRepository<Instance> _instanceQuery;
-    private readonly IEncryptionService _encryptionService;
-    private readonly string _encryptionKey;
+    private readonly IQueriesRepository<Instance> _instanceQuery = instanceQuery;
 
-    public GetInstancesQuery(IQueriesRepository<Instance> instanceQuery, IEncryptionKeyResolver encryptionKeyResolver, IEncryptionService encryptionService)
+    public async Task<IEnumerable<Instance>> Execute(string? tenantName = null, string? status = null)
     {
-        _instanceQuery = instanceQuery;
-        _encryptionKey = encryptionKeyResolver.GetEncryptionKey();
-        _encryptionService = encryptionService;
-    }
-    public async Task<IEnumerable<Instance>> Execute()
-    {
-        var instances = await _instanceQuery.GetAllAsync();
+        var query = _instanceQuery.Query()
+            .Include(i => i.OdsInstanceContexts)
+            .Include(i => i.OdsInstanceDerivatives)
+            .AsNoTracking();
 
-        foreach (var instance in instances)
+        if (!string.IsNullOrEmpty(tenantName))
         {
-            JsonNode? jn = JsonNode.Parse(instance.Document);
-
-            var encryptedClientId = jn!["clientId"]?.AsValue().ToString();
-            var encryptedClientSecret = jn!["clientSecret"]?.AsValue().ToString();
-
-            var clientId = string.Empty;
-            var clientSecret = string.Empty;
-
-            if (!string.IsNullOrEmpty(encryptedClientId) && !string.IsNullOrEmpty(encryptedClientSecret))
-            {
-                _encryptionService.TryDecrypt(encryptedClientId, _encryptionKey, out clientId);
-                _encryptionService.TryDecrypt(encryptedClientSecret, _encryptionKey, out clientSecret);
-
-                jn!["clientId"] = clientId;
-                jn!["clientSecret"] = clientSecret;
-            }
-
-            instance.Document = jn!.ToJsonString();
+            query = query.Where(i => i.TenantName == tenantName);
         }
 
-        return instances.ToList();
+        if (!string.IsNullOrEmpty(status))
+        {
+            if (!Enum.TryParse<InstanceStatus>(status, true, out var statusEnum))
+            {
+                throw new ArgumentException($"'{status}' is invalid state. Allowed values: {string.Join(", ", Enum.GetNames(typeof(InstanceStatus)))}");
+            }
+            query = query.Where(i => i.Status == statusEnum);
+        }
+
+        return await query.ToListAsync();
     }
 }

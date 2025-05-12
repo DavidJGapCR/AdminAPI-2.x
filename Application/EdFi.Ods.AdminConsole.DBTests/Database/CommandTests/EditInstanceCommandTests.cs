@@ -10,12 +10,16 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using EdFi.Admin.DataAccess.Models;
+using EdFi.Ods.AdminApi.AdminConsole.Infrastructure.DataAccess.Contexts.Admin.MsSql;
 using EdFi.Ods.AdminApi.AdminConsole.Infrastructure.DataAccess.Models;
 using EdFi.Ods.AdminApi.AdminConsole.Infrastructure.Repositories;
 using EdFi.Ods.AdminApi.AdminConsole.Infrastructure.Services;
 using EdFi.Ods.AdminApi.AdminConsole.Infrastructure.Services.Instances.Commands;
+using EdFi.Ods.AdminApi.AdminConsole.Infrastructure.Services.Instances.Models;
+using EdFi.Ods.AdminApi.Common.Infrastructure.Database;
 using EdFi.Ods.AdminApi.Infrastructure.Database.Commands;
 using Microsoft.EntityFrameworkCore;
 using Moq;
@@ -35,51 +39,83 @@ public class EditInstanceCommandTests : PlatformUsersContextTestBase
         var originalOdsInstance = new Instance
         {
             TenantId = 1,
+            TenantName = "Test Tenant",
             OdsInstanceId = 1,
-            Document = "{\"name\": \"Instance #3 - 2024\",\"instanceType\": null}\r\n",
-            ApiCredentials = "{\"clientId\": \"test\",\"clientSecret\": \"testSecret\"}\r\n"
+            InstanceName = "Test Instance",
+            InstanceType = "Standard",
+            Status = InstanceStatus.Completed,
+            OdsInstanceContexts = new List<AdminApi.AdminConsole.Infrastructure.DataAccess.Models.OdsInstanceContext>(),
+            OdsInstanceDerivatives = new List<AdminApi.AdminConsole.Infrastructure.DataAccess.Models.OdsInstanceDerivative>()
         };
-
-
         Save(originalOdsInstance);
-        _odsInstanceId = originalOdsInstance.OdsInstanceId;
+        _odsInstanceId = originalOdsInstance.Id;
     }
 
     [Test]
-    public void ShouldEditInstance()
+    public async Task ShouldEditInstanceAsync()
     {
-        var Document = "{\"name\": \"Instance #4 - 2024\",\"instanceType\": null}\r\n";
+        AdminConsoleSqlServerUsersContext userDbContext = new(GetUserDbContextOptions());
+        var dbContext = new AdminConsoleMsSqlContext(GetDbContextOptions());
 
-        var options = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true,
-            Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
-        };
+        var newInstanceData = new Mock<IInstanceRequestModel>();
+        newInstanceData.Setup(v => v.OdsInstanceId).Returns(1);
+        newInstanceData.Setup(v => v.TenantId).Returns(1);
+        newInstanceData.Setup(v => v.TenantName).Returns("UpdateTenantName");
+        newInstanceData.Setup(v => v.Name).Returns("Updated Instance");
+        newInstanceData.Setup(v => v.InstanceType).Returns("Updated Type");
+        newInstanceData.Setup(v => v.OdsInstanceContexts).Returns(new List<OdsInstanceContextModel>());
+        newInstanceData.Setup(v => v.OdsInstanceDerivatives).Returns(new List<OdsInstanceDerivativeModel>());
 
-        ExpandoObject documentExpandObject = JsonSerializer.Deserialize<ExpandoObject>(Document, options);
 
-        var newInstanceData = new Mock<IEditInstanceModel>();
-        newInstanceData.Setup(v => v.Document).Returns(documentExpandObject);
+        var repository = new CommandRepository<Instance>(dbContext);
+        var qRepository = new QueriesRepository<Instance>(dbContext);
+        var command = new EditInstanceCommand(repository, qRepository, dbContext, userDbContext);
 
-        var encryptionService = new EncryptionService();
-        var encryptionKey = Testing.GetEncryptionKeyResolver().GetEncryptionKey();
+        var result = await command.Execute(_odsInstanceId, newInstanceData.Object);
 
-        Transaction(async dbContext =>
-        {
-            var repository = new CommandRepository<Instance>(dbContext);
-            var qRepository = new QueriesRepository<Instance>(dbContext);
-            var command = new EditInstanceCommand(repository, qRepository, Testing.GetEncryptionKeyResolver(), encryptionService);
+        var persistedInstance = dbContext.Instances;
+        persistedInstance.Count().ShouldBeGreaterThanOrEqualTo(1);
+        var instance = persistedInstance.First(p => p.Id == _odsInstanceId);
+        instance.TenantId.ShouldBe(1);
+        instance.TenantName.ShouldBe("UpdateTenantName");
+        instance.OdsInstanceId.ShouldBe(1);
+        instance.InstanceName.ShouldBe("Updated Instance");
+        instance.InstanceType.ShouldBe("Updated Type");
+        instance.OdsInstanceContexts.ShouldBeNull();
+        instance.OdsInstanceDerivatives.ShouldBeNull();
+    }
 
-            var result = await command.Execute(_odsInstanceId, newInstanceData.Object);
-        });
+    [Test]
+    public async Task ShouldSetPendingRenameStatusWhenNameChangesAsync()
+    {
+        AdminConsoleSqlServerUsersContext userDbContext = new(GetUserDbContextOptions());
+        var dbContext = new AdminConsoleMsSqlContext(GetDbContextOptions());
 
-        Transaction(dbContext =>
-        {
-            var persistedInstance = dbContext.Instances;
-            persistedInstance.Count().ShouldBe(1);
-            persistedInstance.First().TenantId.ShouldBe(1);
-            persistedInstance.First().OdsInstanceId.ShouldBe(1);
-            persistedInstance.First().Document.ShouldBe(Document);
-        });
+        var newInstanceData = new Mock<IInstanceRequestModel>();
+        newInstanceData.Setup(v => v.OdsInstanceId).Returns(1);
+        newInstanceData.Setup(v => v.TenantId).Returns(1);
+        newInstanceData.Setup(v => v.TenantName).Returns("UpdateTenantName");
+        newInstanceData.Setup(v => v.Name).Returns("Updated Instance");
+        newInstanceData.Setup(v => v.InstanceType).Returns("Updated Type");
+        newInstanceData.Setup(v => v.OdsInstanceContexts).Returns(new List<OdsInstanceContextModel>());
+        newInstanceData.Setup(v => v.OdsInstanceDerivatives).Returns(new List<OdsInstanceDerivativeModel>());
+
+
+        var repository = new CommandRepository<Instance>(dbContext);
+        var qRepository = new QueriesRepository<Instance>(dbContext);
+        var command = new EditInstanceCommand(repository, qRepository, dbContext, userDbContext);
+        var result = await command.Execute(_odsInstanceId, newInstanceData.Object);
+
+        var persistedInstance = dbContext.Instances;
+        persistedInstance.Count().ShouldBeGreaterThanOrEqualTo(1);
+        var instance = persistedInstance.First(p => p.Id == _odsInstanceId);
+        instance.TenantId.ShouldBe(1);
+        instance.TenantName.ShouldBe("UpdateTenantName");
+        instance.OdsInstanceId.ShouldBe(1);
+        instance.InstanceName.ShouldBe("Updated Instance");
+        instance.InstanceType.ShouldBe("Updated Type");
+        instance.Status.ToString().ShouldBe(InstanceStatus.Pending_Rename.ToString());
+        instance.OdsInstanceContexts.ShouldBeNull();
+        instance.OdsInstanceDerivatives.ShouldBeNull();
     }
 }

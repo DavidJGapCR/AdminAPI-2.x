@@ -178,6 +178,8 @@ function Get-RestApiPackage {
         throw "NuGet package install failed for RestApi.Databases"
     }
 
+    Write-Host (Resolve-Path $wildcardPath)
+
     return (Resolve-Path $wildcardPath)
 }
 

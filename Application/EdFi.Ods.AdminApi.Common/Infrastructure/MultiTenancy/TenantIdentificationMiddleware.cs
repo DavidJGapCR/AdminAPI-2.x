@@ -9,30 +9,20 @@ using EdFi.Ods.AdminApi.Common.Settings;
 using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http;
 using Microsoft.Extensions.Options;
 
 namespace EdFi.Ods.AdminApi.Common.Infrastructure.MultiTenancy;
 
-public class TenantResolverMiddleware : IMiddleware
+public partial class TenantResolverMiddleware(
+    ITenantConfigurationProvider tenantConfigurationProvider,
+    IContextProvider<TenantConfiguration> tenantConfigurationContextProvider,
+    IOptions<AppSettings> options,
+    IOptions<SwaggerSettings> swaggerOptions) : IMiddleware
 {
-    private readonly ITenantConfigurationProvider _tenantConfigurationProvider;
-    private readonly IContextProvider<TenantConfiguration> _tenantConfigurationContextProvider;
-    private readonly IOptions<AppSettings> _options;
-    private readonly IOptions<SwaggerSettings> _swaggerOptions;
-
-    public TenantResolverMiddleware(
-        ITenantConfigurationProvider tenantConfigurationProvider,
-        IContextProvider<TenantConfiguration> tenantConfigurationContextProvider,
-        IOptions<AppSettings> options,
-        IOptions<SwaggerSettings> swaggerOptions)
-    {
-        _tenantConfigurationProvider = tenantConfigurationProvider;
-        _tenantConfigurationContextProvider = tenantConfigurationContextProvider;
-        _options = options;
-        _swaggerOptions = swaggerOptions;
-
-    }
+    private readonly ITenantConfigurationProvider _tenantConfigurationProvider = tenantConfigurationProvider;
+    private readonly IContextProvider<TenantConfiguration> _tenantConfigurationContextProvider = tenantConfigurationContextProvider;
+    private readonly IOptions<AppSettings> _options = options;
+    private readonly IOptions<SwaggerSettings> _swaggerOptions = swaggerOptions;
 
     public async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
@@ -85,7 +75,8 @@ public class TenantResolverMiddleware : IMiddleware
                 if (_options.Value.EnableAdminConsoleAPI)
                 {
                     if (!context.Request.Path.Value!.Contains("adminconsole/tenants") &&
-                    context.Request.Method != "GET")
+                    context.Request.Method != "GET" &&
+                    !context.Request.Path.Value.Contains("health", StringComparison.InvariantCultureIgnoreCase))
                     {
                         ThrowTenantValidationError("Tenant header is missing (adminconsole)");
                     }
@@ -110,14 +101,14 @@ public class TenantResolverMiddleware : IMiddleware
 
         void ThrowTenantValidationError(string errorMessage)
         {
-            throw new ValidationException(new[] { new ValidationFailure("Tenant", errorMessage) });
+            throw new ValidationException([new ValidationFailure("Tenant", errorMessage)]);
         }
     }
 
-    private bool IsValidTenantId(string tenantId)
+    private static bool IsValidTenantId(string tenantId)
     {
         const int MaxLength = 50;
-        var regex = new Regex("^[A-Za-z0-9-]+$");
+        var regex = IsValidTenantIdRegex();
 
         if (string.IsNullOrEmpty(tenantId) || tenantId.Length > MaxLength ||
                        !regex.IsMatch(tenantId))
@@ -126,4 +117,7 @@ public class TenantResolverMiddleware : IMiddleware
         }
         return true;
     }
+
+    [GeneratedRegex("^[A-Za-z0-9-]+$")]
+    private static partial Regex IsValidTenantIdRegex();
 }

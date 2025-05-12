@@ -3,8 +3,6 @@
 // The Ed-Fi Alliance licenses this file to you under the Apache License, Version 2.0.
 // See the LICENSE and NOTICES files in the project root for more information.
 
-using System.Text.Json.Nodes;
-using EdFi.Ods.AdminApi.AdminConsole.Helpers;
 using EdFi.Ods.AdminApi.AdminConsole.Infrastructure.DataAccess.Models;
 using EdFi.Ods.AdminApi.AdminConsole.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -13,19 +11,14 @@ namespace EdFi.Ods.AdminApi.AdminConsole.Infrastructure.Services.Permissions.Que
 
 public interface IGetPermissionByIdQuery
 {
-    Task<Permission> Execute(int tenantId, int DocId);
+    Task<Permission?> Execute(int tenantId, int DocId);
 }
 
-public class GetPermissionByIdQuery : IGetPermissionByIdQuery
+public class GetPermissionByIdQuery(IQueriesRepository<Permission> permissionQuery) : IGetPermissionByIdQuery
 {
-    private readonly IQueriesRepository<Permission> _permissionQuery;
+    private readonly IQueriesRepository<Permission> _permissionQuery = permissionQuery;
 
-    public GetPermissionByIdQuery(IQueriesRepository<Permission> permissionQuery, IEncryptionKeyResolver encryptionKeyResolver, IEncryptionService encryptionService)
-    {
-        _permissionQuery = permissionQuery;
-    }
-
-    public async Task<Permission> Execute(int tenantId, int DocId)
+    public async Task<Permission?> Execute(int tenantId, int DocId)
     {
         var permission = await _permissionQuery.Query().SingleOrDefaultAsync(permission => permission.TenantId == tenantId && permission.DocId == DocId);
         return permission;

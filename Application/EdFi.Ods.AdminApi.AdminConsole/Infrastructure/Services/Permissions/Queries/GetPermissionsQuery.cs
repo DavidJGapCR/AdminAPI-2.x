@@ -3,8 +3,6 @@
 // The Ed-Fi Alliance licenses this file to you under the Apache License, Version 2.0.
 // See the LICENSE and NOTICES files in the project root for more information.
 
-using System.Text.Json.Nodes;
-using EdFi.Ods.AdminApi.AdminConsole.Helpers;
 using EdFi.Ods.AdminApi.AdminConsole.Infrastructure.DataAccess.Models;
 using EdFi.Ods.AdminApi.AdminConsole.Infrastructure.Repositories;
 
@@ -15,14 +13,10 @@ public interface IGetPermissionsQuery
     Task<IEnumerable<Permission>> Execute();
 }
 
-public class GetPermissionsQuery : IGetPermissionsQuery
+public class GetPermissionsQuery(IQueriesRepository<Permission> permissionQuery) : IGetPermissionsQuery
 {
-    private readonly IQueriesRepository<Permission> _permissionQuery;
+    private readonly IQueriesRepository<Permission> _permissionQuery = permissionQuery;
 
-    public GetPermissionsQuery(IQueriesRepository<Permission> permissionQuery, IEncryptionKeyResolver encryptionKeyResolver, IEncryptionService encryptionService)
-    {
-        _permissionQuery = permissionQuery;
-    }
     public async Task<IEnumerable<Permission>> Execute()
     {
         var permissions = await _permissionQuery.GetAllAsync();
