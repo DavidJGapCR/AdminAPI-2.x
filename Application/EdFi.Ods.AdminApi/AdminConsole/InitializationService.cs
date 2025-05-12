@@ -3,25 +3,12 @@
 // The Ed-Fi Alliance licenses this file to you under the Apache License, Version 2.0.
 // See the LICENSE and NOTICES files in the project root for more information.
 
-using System.Dynamic;
-using AutoMapper;
 using EdFi.Admin.DataAccess.Contexts;
 using EdFi.Admin.DataAccess.Models;
-using EdFi.Ods.AdminApi.AdminConsole.Infrastructure.Services.Instances.Commands;
-using EdFi.Ods.AdminApi.AdminConsole.Infrastructure.Services.Instances.Queries;
 using EdFi.Ods.AdminApi.Common.Settings;
-using EdFi.Ods.AdminApi.Features.Applications;
-using EdFi.Ods.AdminApi.Features.OdsInstanceContext;
-using EdFi.Ods.AdminApi.Features.OdsInstanceDerivative;
-using EdFi.Ods.AdminApi.Features.ODSInstances;
 using EdFi.Ods.AdminApi.Infrastructure.Database.Commands;
 using EdFi.Ods.AdminApi.Infrastructure.Database.Queries;
-using log4net;
 using Microsoft.Extensions.Options;
-using Microsoft.Identity.Client;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
-using static EdFi.Ods.AdminApi.AdminConsole.Features.Instances.AddInstance;
 using static EdFi.Ods.AdminApi.Features.Applications.AddApplication;
 using static EdFi.Ods.AdminApi.Features.Vendors.AddVendor;
 
