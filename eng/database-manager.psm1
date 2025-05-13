@@ -58,6 +58,9 @@ GO
 "@
 
     Write-Host "Dropping the $databaseName Database."
+
+    Install-Module sqlserver -Force
+    Import-Module sqlserver -Force
     Invoke-SqlCmd -ConnectionString $masterConnection -Query $dropDatabase
 }
 
@@ -577,7 +580,7 @@ function Invoke-PrepareDatabasesForTesting {
         $UseIntegratedSecurity,
 
         [string]
-        $DbUser,
+        $DbUsername,
 
         [string]
         $DbPassword,
@@ -589,14 +592,8 @@ function Invoke-PrepareDatabasesForTesting {
         $ToolsPath = "$PSScriptRoot/.tools"
     )
 
-    Write-Output "ffffffffffff"
-
     Import-Module -Name "$PSScriptRoot/package-manager.psm1" -Force
     Import-Module -Name "$PSScriptRoot/database-manager.psm1" -Force
-
-
-    Write-Output "tttttttttt"
-
 
     $arguments = @{
         RestApiPackageVersion = $RestApiPackageVersion
@@ -607,7 +604,6 @@ function Invoke-PrepareDatabasesForTesting {
         RestApiPackagePrerelease = $RestApiPackagePrerelease
     }
 
-    
     $arguments.GetEnumerator() | ForEach-Object { Write-Output "$($_.Key) = $($_.Value)" }
 
     try {
@@ -617,9 +613,6 @@ function Invoke-PrepareDatabasesForTesting {
         throw
     }
 
-    Write-Host "asdfasdfasdf"
-    Write-Host $dbPackagePath
-    
     $installArguments = @{
         ToolsPath = $ToolsPath
         DbDeployVersion = $DbDeployVersion
@@ -641,25 +634,18 @@ function Invoke-PrepareDatabasesForTesting {
         Password = $DbPassword
     }
 
-    Write-Output "111111111111"
-
     $installArguments.DatabaseName = "EdFi_Security_Test"
     $removeArguments.DatabaseName = "EdFi_Security_Test"
     Write-Host "Installing the Security database to $($installArguments.DatabaseName)" -ForegroundColor Cyan
     Remove-SqlServerDatabase @removeArguments
 
-    Write-Output "22222222222222hhh"
     Install-EdFiSecurityDatabase @installArguments
-
-    Write-Output "22222222222222"
 
     $installArguments.DatabaseName = "EdFi_Admin_Test"
     $removeArguments.DatabaseName = "EdFi_Admin_Test"
     Write-Host "Installing the Admin database to $($installArguments.DatabaseName)" -ForegroundColor Cyan
     Remove-SqlServerDatabase @removeArguments
     Install-EdFiAdminDatabase @installArguments
-
-    Write-Output "333333333333"
 
     $installArguments.Remove("RestApiPackagePath")
     Write-Host "Installing the Admin App tables to $($installArguments.DatabaseName)" -ForegroundColor Cyan

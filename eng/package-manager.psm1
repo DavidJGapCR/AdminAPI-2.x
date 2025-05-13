@@ -161,6 +161,7 @@ function Get-RestApiPackage {
         "install", "$RestApiPackageName",
         "-OutputDirectory", "$PackagesPath",
         "-Source", "$NuGetFeed"
+        "-Verbosity", "detailed"
     )
 
     if ($RestApiPackagePrerelease) {
@@ -172,13 +173,12 @@ function Get-RestApiPackage {
     }
 
     Write-Host "Executing: nuget $arguments" -ForegroundColor Magenta
+    
     nuget @arguments | Out-Null
 
     if ($LASTEXITCODE -ne 0) {
         throw "NuGet package install failed for RestApi.Databases"
     }
-
-    Write-Host (Resolve-Path $wildcardPath)
 
     return (Resolve-Path $wildcardPath)
 }
