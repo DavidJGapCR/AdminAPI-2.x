@@ -307,7 +307,7 @@ function ResetTestDatabases {
         $arguments = @{
             RestApiPackageVersion    = $OdsVersion
             RestApiPackageName       = $OdsPackageName
-            UseIntegratedSecurity    = $true
+            UseIntegratedSecurity    = $false
             RestApiPackagePrerelease = $Prerelease
             NuGetFeed                = $EdFiNuGetFeed
             DbServer                 = "sqlserver"
