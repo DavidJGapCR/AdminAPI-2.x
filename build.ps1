@@ -119,7 +119,7 @@ param(
 
     # Only required with local builds and testing.
     [switch]
-    $IsLocalBuild = $True,
+    $IsLocalBuild = $False,
 
     # Option to run coverlet for code coverage analysis, only applicable when running tests
     [switch]
@@ -307,9 +307,12 @@ function ResetTestDatabases {
         $arguments = @{
             RestApiPackageVersion    = $OdsVersion
             RestApiPackageName       = $OdsPackageName
-            UseIntegratedSecurity    = $true
+            UseIntegratedSecurity    = $false
             RestApiPackagePrerelease = $Prerelease
             NuGetFeed                = $EdFiNuGetFeed
+            DbServer                 = "sqlserver"
+            DbUsername               = "sa"
+            DbPassword               = "Password1!" 
         }
 
         Invoke-PrepareDatabasesForTesting @arguments
