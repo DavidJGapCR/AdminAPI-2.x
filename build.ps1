@@ -310,8 +310,8 @@ function ResetTestDatabases {
             UseIntegratedSecurity    = $false
             RestApiPackagePrerelease = $Prerelease
             NuGetFeed                = $EdFiNuGetFeed
-            DbUsername               = "edfi"
-            DbPassword               = "P@55w0rd" 
+            DbUsername               = "sa"
+            DbPassword               = "h!ToPP54*32LPaq%1"
         }
 
         Invoke-PrepareDatabasesForTesting @arguments
