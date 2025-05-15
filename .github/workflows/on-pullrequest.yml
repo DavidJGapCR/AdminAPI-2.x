@@ -79,8 +79,8 @@ jobs:
         uses: github/codeql-action/analyze@48ab28a6f5dbc2a99bf1e0131198dd8f1df78169 # codeql-bundle-v3.28.0
 
   run-integration-tests:
-    # runs-on: ubuntu-22.04
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
+    # runs-on: ubuntu-latest
     defaults:
       run:
         shell: pwsh
