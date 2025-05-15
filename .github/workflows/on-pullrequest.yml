@@ -89,7 +89,7 @@ jobs:
         image: mcr.microsoft.com/mssql/server@sha256:d7f2c670f0cd807b4dc466b8887bd2b39a4561f624c154896f5564ea38efd13a
         env:
           ACCEPT_EULA: "Y"
-          SA_PASSWORD: "h!ToPP54*32LPaq%1"
+          SA_PASSWORD: "P@55w0rd"
           MSSQL_ENABLE_HADR: "1"
           MSSQL_USER: "edfi"
           MSSQL_PASSWORD: "P@55w0rd"

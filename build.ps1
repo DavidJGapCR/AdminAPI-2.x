@@ -311,7 +311,7 @@ function ResetTestDatabases {
             RestApiPackagePrerelease = $Prerelease
             NuGetFeed                = $EdFiNuGetFeed
             DbUsername               = "sa"
-            DbPassword               = "h!ToPP54*32LPaq%1"
+            DbPassword               = "P@55w0rd"
         }
 
         Invoke-PrepareDatabasesForTesting @arguments
