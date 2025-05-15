@@ -119,7 +119,7 @@ param(
 
     # Only required with local builds and testing.
     [switch]
-    $IsLocalBuild = $True,
+    $IsLocalBuild,
 
     # Option to run coverlet for code coverage analysis, only applicable when running tests
     [switch]
