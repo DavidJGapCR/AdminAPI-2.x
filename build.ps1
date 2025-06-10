@@ -123,7 +123,19 @@ param(
 
     # Option to run coverlet for code coverage analysis, only applicable when running tests
     [switch]
-    $RunCoverageAnalysis
+    $RunCoverageAnalysis,
+
+    # Option to run integration tests with or without integrated security
+    [Switch]
+    $UseIntegratedSecurity = $true,
+
+    # Option to run integration tests with no integrated security
+    [string]
+    $DbUsername,
+
+    # Option to run integration tests with no integrated security
+    [string]
+    $DbPassword
 )
 
 $Env:MSBUILDDISABLENODEREUSE = "1"
@@ -300,16 +312,27 @@ function ResetTestDatabases {
         $OdsVersion,
 
         [switch]
-        $Prerelease
+        $Prerelease,
+
+        [switch]
+        $UseIntegratedSecurity,
+
+        [string]
+        $DbUsername,
+
+        [string]
+        $DbPassword
     )
 
     Invoke-Execute {
         $arguments = @{
             RestApiPackageVersion    = $OdsVersion
             RestApiPackageName       = $OdsPackageName
-            UseIntegratedSecurity    = $true
+            UseIntegratedSecurity    = $UseIntegratedSecurity
             RestApiPackagePrerelease = $Prerelease
             NuGetFeed                = $EdFiNuGetFeed
+            DbUsername               = $DbUsername
+            DbPassword               = $DbPassword
         }
 
         Invoke-PrepareDatabasesForTesting @arguments
@@ -431,16 +454,28 @@ function Invoke-UnitTestSuite {
 }
 
 function Invoke-IntegrationTestSuite {
-    Invoke-Step { InitializeNuGet }
+    param (
+        [Switch]
+        $UseIntegratedSecurity,
+
+        [string]
+        $DbUsername,
+
+        [string]
+        $DbPassword
+    )
 
     $supportedApiVersions | ForEach-Object {
         Write-Output "Running Integration Tests for ODS Version" $_.OdsVersion
 
         Invoke-Step {
             $arguments = @{
-                OdsVersion     = $_.OdsVersion
-                OdsPackageName = $_.OdsPackageName
-                Prerelease     = $_.Prerelease
+                OdsVersion              = $_.OdsVersion
+                OdsPackageName          = $_.OdsPackageName
+                Prerelease              = $_.Prerelease
+                UseIntegratedSecurity   = $UseIntegratedSecurity
+                DbUsername              = $DbUsername
+                DbPassword              = $DbPassword
             }
             ResetTestDatabases @arguments
         }
@@ -466,6 +501,7 @@ function UpdateAppSettingsForAdminApiDocker {
     $json.AppSettings.PathBase = $DockerEnvValues["PathBase"]
 
     $json.Authentication.IssuerUrl = $DockerEnvValues["IssuerUrl"]
+    $json.Authentication.Authority = $DockerEnvValues["Authority"]
     $json.Authentication.SigningKey = $DockerEnvValues["SigningKey"]
 
     $json.ConnectionStrings.EdFi_Admin = $DockerEnvValues["AdminDB"]
@@ -481,6 +517,7 @@ function UpdateAppSettingsForAdminApi {
     $json.AppSettings.PathBase = $DockerEnvValues["PathBase"]
 
     $json.Authentication.IssuerUrl = $DockerEnvValues["IssuerUrl"]
+    $json.Authentication.Authority = $DockerEnvValues["Authority"]
     $json.Authentication.SigningKey = $DockerEnvValues["SigningKey"]
 
     $json.ConnectionStrings.EdFi_Admin = $DockerEnvValues["AdminDB"]
@@ -592,16 +629,28 @@ Invoke-Main {
             }
         }
         IntegrationTest {
-            Invoke-IntegrationTestSuite
+            $arguments = @{
+                UseIntegratedSecurity    = $UseIntegratedSecurity
+                DbUsername               = $DbUsername
+                DbPassword               = $DbPassword
+            }
+
+            Invoke-IntegrationTestSuite @arguments
 
             if ($script:RunCoverageAnalysis) {
                 Invoke-Step { GenerateCoverageReport }
             }
         }
         BuildAndTest {
+            $arguments = @{
+                UseIntegratedSecurity    = $UseIntegratedSecurity
+                DbUsername               = $DbUsername
+                DbPassword               = $DbPassword
+            }
+
             Invoke-Build
             Invoke-UnitTestSuite
-            Invoke-IntegrationTestSuite
+            Invoke-IntegrationTestSuite @arguments
 
             if ($script:RunCoverageAnalysis) {
                 Invoke-Step { GenerateCoverageReport }

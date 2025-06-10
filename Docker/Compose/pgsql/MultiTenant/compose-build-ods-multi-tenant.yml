@@ -10,8 +10,6 @@ services:
       POSTGRES_USER: "${POSTGRES_USER}"
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
       TPDM_ENABLED: "${TPDM_ENABLED:-true}"
-    ports:
-      - "5403:5432"
     volumes:
       - vol-db-ods-tenant1:/var/lib/postgresql/data
     restart: always
@@ -27,8 +25,6 @@ services:
       POSTGRES_USER: "${POSTGRES_USER}"
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
       TPDM_ENABLED: "${TPDM_ENABLED:-true}"
-    ports:
-      - "5404:5432"
     volumes:
       - vol-db-ods-tenant2:/var/lib/postgresql/data
     restart: always

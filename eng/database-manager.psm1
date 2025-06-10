@@ -57,7 +57,8 @@ IF EXISTS (SELECT 1 FROM sys.databases WHERE name = '$databaseName')
 GO
 "@
 
-    Write-Host "Dropping the $databaseName Database."
+    Install-Module sqlserver -Force
+    Import-Module sqlserver -Force
     Invoke-SqlCmd -ConnectionString $masterConnection -Query $dropDatabase
 }
 
@@ -141,6 +142,10 @@ function Invoke-DbDeploy {
     )
 
     Write-Host "Executing: $DbDeployExe $(Get-MaskedConnectionString $arguments)" -ForegroundColor Magenta
+    if ($DbDeployExe -like "*.exe") {
+        $DbDeployExe = $DbDeployExe -replace "\.exe$", ""
+    }
+
     &$DbDeployExe @arguments
 
     if ($LASTEXITCODE -ne 0) {
@@ -169,7 +174,7 @@ function Install-EdFiDatabase {
         [string]
         [ValidateSet("Admin", "ODS", "Security")]
         [Parameter(Mandatory=$true)]
-        $DatabaseType,
+        $DatabaseType = "Admin",
 
         # True if connection string is for a PostgreSQL database. Otherwise for SQL Server.
         [switch]
@@ -458,7 +463,6 @@ function Install-EdFiSecurityDatabase {
         $FilePaths
     )
 
-
     $arguments = @{
         ToolsPath = $ToolsPath
         DbDeployVersion = $DbDeployVersion
@@ -490,6 +494,11 @@ function Install-AdminApiTables {
         # Ed-Fi NuGet feed for tool download.
         [string]
         $NuGetFeed,
+
+        [string]
+        [ValidateSet("Admin", "ODS", "Security")]
+        [Parameter(Mandatory=$true)]
+        $DatabaseType = "Admin",
 
         # True if connection string is for a PostgreSQL database. Otherwise for SQL Server.
         [switch]
@@ -528,7 +537,7 @@ function Install-AdminApiTables {
         ToolsPath = $ToolsPath
         DbDeployVersion = $DbDeployVersion
         NuGetFeed = $NuGetFeed
-        DatabaseType = "Admin"
+        DatabaseType = $DatabaseType
         ForPostgreSQL = $ForPostgreSQL
         Server = $Server
         DatabaseName = $DatabaseName
@@ -577,7 +586,7 @@ function Invoke-PrepareDatabasesForTesting {
         $UseIntegratedSecurity,
 
         [string]
-        $DbUser,
+        $DbUsername,
 
         [string]
         $DbPassword,
@@ -600,6 +609,7 @@ function Invoke-PrepareDatabasesForTesting {
         ToolsPath = $ToolsPath
         RestApiPackagePrerelease = $RestApiPackagePrerelease
     }
+
     $dbPackagePath = Get-RestApiPackage @arguments
 
     $installArguments = @{
@@ -624,12 +634,15 @@ function Invoke-PrepareDatabasesForTesting {
     }
 
     $installArguments.DatabaseName = "EdFi_Security_Test"
+    $installArguments.DatabaseType = "Security"
     $removeArguments.DatabaseName = "EdFi_Security_Test"
     Write-Host "Installing the Security database to $($installArguments.DatabaseName)" -ForegroundColor Cyan
     Remove-SqlServerDatabase @removeArguments
+
     Install-EdFiSecurityDatabase @installArguments
 
     $installArguments.DatabaseName = "EdFi_Admin_Test"
+    $installArguments.DatabaseType = "Admin"
     $removeArguments.DatabaseName = "EdFi_Admin_Test"
     Write-Host "Installing the Admin database to $($installArguments.DatabaseName)" -ForegroundColor Cyan
     Remove-SqlServerDatabase @removeArguments
