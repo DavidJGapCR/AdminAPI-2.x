@@ -3,6 +3,7 @@
 // The Ed-Fi Alliance licenses this file to you under the Apache License, Version 2.0.
 // See the LICENSE and NOTICES files in the project root for more information.
 
+using System.Net;
 using System.Security.Authentication;
 using System.Security.Claims;
 using EdFi.Ods.AdminApi.Common.Infrastructure.ErrorHandling;
@@ -17,10 +18,9 @@ public interface ITokenService
     Task<ClaimsPrincipal> Handle(OpenIddictRequest request);
 }
 
-public class TokenService(IOpenIddictApplicationManager applicationManager, IConfiguration configuration) : ITokenService
+public class TokenService(IOpenIddictApplicationManager applicationManager) : ITokenService
 {
     private readonly IOpenIddictApplicationManager _applicationManager = applicationManager;
-    private readonly IConfiguration _configuration = configuration;
     private const string DENIED_AUTHENTICATION_MESSAGE = "Access Denied. Please review your information and try again.";
 
     public async Task<ClaimsPrincipal> Handle(OpenIddictRequest request)
@@ -37,28 +37,25 @@ public class TokenService(IOpenIddictApplicationManager applicationManager, ICon
         {
             throw new AuthenticationException(DENIED_AUTHENTICATION_MESSAGE);
         }
-
         var requestedScopes = request.GetScopes();
-        var appScopes = (await _applicationManager.GetPermissionsAsync(application))
-            .Where(p => p.StartsWith(OpenIddictConstants.Permissions.Prefixes.Scope))
-            .Select(p => p[OpenIddictConstants.Permissions.Prefixes.Scope.Length..])
-            .ToList();
 
-        var missingScopes = requestedScopes.Where(s => !appScopes.Contains(s)).ToList();
-        if (missingScopes.Count != 0)
-            throw new AuthenticationException(DENIED_AUTHENTICATION_MESSAGE);
+        // Get all valid scopes from system definition
+        var allValidScopes = SecurityConstants.Scopes.AllScopes.Select(s => s.Scope).ToList();
+
+        // Check if any of the requested scopes are not in the list of valid scopes
+        var validScopes = requestedScopes.Where(s => allValidScopes.Contains(s)).ToList();
+        if (validScopes.Count == 0)
+        {
+            throw new AdminApiException("The request is missing required scope claims or has invalid scope values")
+            {
+                StatusCode = HttpStatusCode.BadRequest
+            };
+        }
 
         var displayName = await _applicationManager.GetDisplayNameAsync(application);
         var identity = new ClaimsIdentity(JwtBearerDefaults.AuthenticationScheme);
         identity.AddClaim(OpenIddictConstants.Claims.Subject, request.ClientId!, OpenIddictConstants.Destinations.AccessToken);
         identity.AddClaim(OpenIddictConstants.Claims.Name, displayName!, OpenIddictConstants.Destinations.AccessToken);
-        var roles = Roles.AllRoles.Select(obj => obj.RoleName).ToList();
-        var defaultRoleClaim = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role";
-        var rolesClaim = _configuration?.GetValue<string>("AppSettings:RoleClaimAttribute") ?? defaultRoleClaim;
-        foreach (var role in roles)
-        {
-            identity.AddClaim(new Claim(rolesClaim, role, OpenIddictConstants.Destinations.AccessToken));
-        }
         var principal = new ClaimsPrincipal(identity);
         principal.SetScopes(requestedScopes);
         foreach (var claim in principal.Claims)

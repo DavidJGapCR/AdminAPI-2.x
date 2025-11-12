@@ -7,8 +7,6 @@
 set -e
 set +x
 
-envsubst < /app/appsettings.template.json > /app/appsettings.json
-
 if [[ -z "$ADMIN_WAIT_POSTGRES_HOSTS" ]]; then
   # if there are no hosts to wait then fallback to $ODS_POSTGRES_HOST
   export ADMIN_WAIT_POSTGRES_HOSTS=$ADMIN_POSTGRES_HOST
@@ -35,5 +33,8 @@ if [[ -f /ssl/server.crt ]]; then
   cp /ssl/server.crt /usr/local/share/ca-certificates/
   update-ca-certificates
 fi
+
+# Writing permissions for multitenant environment so the user can create tenants
+chmod 664 /app/appsettings.json
 
 dotnet EdFi.Ods.AdminApi.dll

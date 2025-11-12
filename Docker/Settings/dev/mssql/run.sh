@@ -7,10 +7,6 @@
 set -e
 set +x
 
-envsubst < /app/appsettings.Docker.mssql.json > /app/temp.json
-
-mv /app/temp.json /app/appsettings.json
-
 if [[ -z "$ADMIN_WAIT_MSSQL_HOSTS" ]]; then
   # if there are no hosts to wait then fallback to $ADMIN_MSSQL_HOST
   export ADMIN_WAIT_MSSQL_HOSTS=$ADMIN_MSSQL_HOST
@@ -33,5 +29,8 @@ if [[ -f /ssl/server.crt ]]; then
  cp /ssl/server.crt /usr/local/share/ca-certificates/
  update-ca-certificates
 fi
+
+# Writing permissions for multitenant environment so the user can create tenants
+chmod 664 /app/appsettings.json
 
 dotnet EdFi.Ods.AdminApi.dll

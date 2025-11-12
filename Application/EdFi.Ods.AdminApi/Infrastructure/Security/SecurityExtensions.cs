@@ -7,7 +7,6 @@ using EdFi.Ods.AdminApi.Common.Infrastructure.ErrorHandling;
 using EdFi.Ods.AdminApi.Common.Infrastructure.Extensions;
 using EdFi.Ods.AdminApi.Common.Infrastructure.Security;
 using EdFi.Ods.AdminApi.Features.Connect;
-using EdFi.Ods.AdminApi.Infrastructure.Documentation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
@@ -25,10 +24,8 @@ public static class SecurityExtensions
         IWebHostEnvironment webHostEnvironment
     )
     {
-        bool useSelfContainedAuthorization = configuration.GetValue<bool>("AppSettings:UseSelfcontainedAuthorization");
-        var issuer = useSelfContainedAuthorization
-            ? configuration.Get<string>("Authentication:IssuerUrl")
-            : configuration.Get<string>("Authentication:OIDC:Authority");
+        var issuer = configuration.Get<string>("Authentication:IssuerUrl");
+
         var isDockerEnvironment = configuration.Get<bool>("EnableDockerEnvironment");
 
         //OpenIddict Server
@@ -94,93 +91,55 @@ public static class SecurityExtensions
                 opt.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 opt.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
             });
-        if (useSelfContainedAuthorization)
+
+        var roleClaimType = configuration.GetValue<string>("Authentication:RoleClaimAttribute")
+                                ?? SecurityConstants.DefaultRoleClaimType;
+
+        authenticationBuilder.AddJwtBearer(opt =>
         {
-            authenticationBuilder.AddJwtBearer(opt =>
+            opt.Authority = issuer;
+            opt.SaveToken = true;
+            opt.TokenValidationParameters = new TokenValidationParameters
             {
-                opt.Authority = issuer;
-                opt.SaveToken = true;
-                opt.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateAudience = false,
-                    ValidateIssuer = true,
-                    ValidateIssuerSigningKey = validateIssuerSigningKey,
-                    ValidIssuer = issuer,
-                    RoleClaimType = "realm_access.roles",
-                    IssuerSigningKey = signingKey
-                };
-                opt.RequireHttpsMetadata = !isDockerEnvironment;
-            })
-            .AddJwtBearer("IdentityProvider", options =>
+                ValidateAudience = false,
+                ValidateIssuer = true,
+                ValidateIssuerSigningKey = validateIssuerSigningKey,
+                ValidIssuer = issuer,
+                RoleClaimType = roleClaimType,
+                IssuerSigningKey = signingKey
+            };
+            opt.RequireHttpsMetadata = false;
+            opt.Events = new JwtBearerEvents
             {
-                var oidcIssuer = configuration.Get<string>("Authentication:OIDC:Authority");
-                if (!string.IsNullOrEmpty(oidcIssuer))
+                OnTokenValidated = context =>
                 {
-                    var oidcValidationCallback = configuration.Get<bool>("Authentication:OIDC:EnableServerCertificateCustomValidationCallback");
-                    var requireHttpsMetadata = configuration.Get<bool>("Authentication:OIDC:RequireHttpsMetadata");
-                    options.Authority = oidcIssuer;
-                    options.SaveToken = true;
-                    options.RequireHttpsMetadata = requireHttpsMetadata;
-                    options.TokenValidationParameters = new TokenValidationParameters
-                    {
-                        ValidateAudience = false,
-                        ValidateIssuer = true,
-                        ValidateIssuerSigningKey = validateIssuerSigningKey,
-                        ValidIssuer = oidcIssuer,
-                        RoleClaimType = "realm_access.roles",
-                        IssuerSigningKeyResolver = (token, securityToken, kid, parameters) =>
-                        {
-                            var handler = new HttpClientHandler
-                            {
-                                ServerCertificateCustomValidationCallback = (request, cert, chain, errors) => oidcValidationCallback
-                            };
-                            // Server certificates should be verified during SSL/TLS connections
-                            // Get public keys from keycloak
-                            var client = new HttpClient(handler);
-                            var response = client.GetStringAsync(oidcIssuer + "/protocol/openid-connect/certs").Result;
-                            var keys = JsonWebKeySet.Create(response).GetSigningKeys();
-                            return keys;
-                        }
-                    };
+                    Console.WriteLine("Token validated successfully.");
+
+                    return Task.CompletedTask;
+                },
+                OnAuthenticationFailed = context =>
+                {
+                    Console.WriteLine($"Authentication failed: {context.Exception.Message}");
+                    return Task.CompletedTask;
                 }
-            });
-        }
-        else
+            };
+        })
+
+        // Named scheme for external Identity provider support
+        .AddJwtBearer("IdentityProvider", options =>
         {
-            authenticationBuilder.AddJwtBearer(options =>
+            options.Authority = issuer;
+            options.SaveToken = true;
+            options.RequireHttpsMetadata = false;
+            options.TokenValidationParameters = new TokenValidationParameters
             {
-                var oidcIssuer = configuration.Get<string>("Authentication:OIDC:Authority");
-                if (!string.IsNullOrEmpty(oidcIssuer))
-                {
-                    var oidcValidationCallback = configuration.Get<bool>("Authentication:OIDC:EnableServerCertificateCustomValidationCallback");
-                    var requireHttpsMetadata = configuration.Get<bool>("Authentication:OIDC:RequireHttpsMetadata");
-                    options.Authority = oidcIssuer;
-                    options.SaveToken = true;
-                    options.RequireHttpsMetadata = requireHttpsMetadata;
-                    options.TokenValidationParameters = new TokenValidationParameters
-                    {
-                        ValidateAudience = false,
-                        ValidateIssuer = configuration.Get<bool>("Authentication:OIDC:ValidateIssuer"),
-                        ValidateIssuerSigningKey = validateIssuerSigningKey,
-                        ValidIssuer = oidcIssuer,
-                        RoleClaimType = "realm_access.roles",
-                        IssuerSigningKeyResolver = (token, securityToken, kid, parameters) =>
-                        {
-                            var handler = new HttpClientHandler
-                            {
-                                ServerCertificateCustomValidationCallback = (request, cert, chain, errors) => oidcValidationCallback
-                            };
-                            // Server certificates should be verified during SSL/TLS connections
-                            // Get public keys from keycloak
-                            var client = new HttpClient(handler);
-                            var response = client.GetStringAsync(oidcIssuer + "/protocol/openid-connect/certs").Result;
-                            var keys = JsonWebKeySet.Create(response).GetSigningKeys();
-                            return keys;
-                        }
-                    };
-                }
-            });
-        }
+                ValidateAudience = false,
+                ValidateIssuer = true,
+                ValidateIssuerSigningKey = validateIssuerSigningKey,
+                ValidIssuer = issuer,
+                RoleClaimType = roleClaimType
+            };
+        });
 
         services.AddAuthorization(opt =>
         {
@@ -198,50 +157,50 @@ public static class SecurityExtensions
                         )
                     )
                 .Build();
-            foreach (var policy in AuthorizationPolicies.RolePolicies)
-            {
-                opt.AddPolicy(policy.PolicyName, policyBuilder =>
-                    policyBuilder.Requirements.Add(policy.RolesAuthorizationRequirement));
-            }
             foreach (var scope in AuthorizationPolicies.ScopePolicies)
             {
                 opt.AddPolicy(scope.PolicyName, policy =>
                 {
                     policy.RequireAssertion(context =>
-                        context.User.HasClaim(c
-                        => c.Type == OpenIddictConstants.Claims.Scope
-                        && c.Value.Split(' ')
-                            .ToList()
-                            .Exists(scopeValue
-                                => string.Equals(scopeValue, scope.Scope, StringComparison.OrdinalIgnoreCase)
-                                    || string.Equals(scopeValue, AuthorizationPolicies.DefaultScopePolicy.Scope, StringComparison.OrdinalIgnoreCase)
-                            )
-                    ));
+                    {
+                        if (context.User.HasClaim(c => c.Type == OpenIddictConstants.Claims.Scope))
+                        {
+                            var scopes = context.User.FindFirst(c => c.Type == OpenIddictConstants.Claims.Scope)?.Value
+                                .Split(' ')
+                                .ToList();
+                            return scopes != null && (scopes.Contains(SecurityConstants.Scopes.AdminApiFullAccess.Scope, StringComparer.OrdinalIgnoreCase)
+                                || scopes.Contains(scope.Scope, StringComparer.OrdinalIgnoreCase));
+                        }
+                        return false;
+                    });
                 });
             }
-
-
         });
-        services.AddSingleton<IAuthorizationHandler, RolesAuthorizationHandler>();
-        // Controllers to hide from Swagger conditionally
-        var controllerNamesToHide = new List<string> { "ConnectController" };
+
+        services.AddControllers();
         //Security Endpoints
         services.AddTransient<ITokenService, TokenService>();
         services.AddTransient<IRegisterService, RegisterService>();
-        services.AddControllers(options =>
-        {
-            options.Conventions.Add(new SwaggerHideControllerConvention(configuration, controllerNamesToHide));
-        });
     }
-
     public class DefaultTokenResponseHandler : IOpenIddictServerHandler<ApplyTokenResponseContext>
     {
         private const string DENIED_AUTHENTICATION_MESSAGE =
             "Access Denied. Please review your information and try again.";
-
         public ValueTask HandleAsync(ApplyTokenResponseContext context)
         {
             var response = context.Response;
+
+            // For invalid_scope errors, set content type to application/problem+json
+            if (string.Equals(response.Error, OpenIddictConstants.Errors.InvalidScope, StringComparison.Ordinal))
+            {
+                response.ErrorUri = "";
+                response.ErrorDescription = "The request is missing required scope claims or has invalid scope values";
+
+                // Mark this response to be processed as problem+json
+                context.Transaction.SetProperty("CustomContentType", "application/problem+json");
+
+                return default;
+            }
 
             if (
                 string.Equals(
@@ -257,11 +216,6 @@ public static class SecurityExtensions
                 || string.Equals(
                     response.Error,
                     OpenIddictConstants.Errors.InvalidClient,
-                    StringComparison.Ordinal
-                )
-                || string.Equals(
-                    response.Error,
-                    OpenIddictConstants.Errors.InvalidScope,
                     StringComparison.Ordinal
                 )
             )

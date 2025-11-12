@@ -27,7 +27,7 @@ public class EditApplication : IFeature
             .BuildForVersions(AdminApiVersions.V2);
     }
 
-    public async Task<IResult> Handle(IEditApplicationCommand editApplicationCommand, IMapper mapper,
+    public static async Task<IResult> Handle(IEditApplicationCommand editApplicationCommand, IMapper mapper,
         Validator validator, IUsersContext db, EditApplicationRequest request, int id)
     {
         request.Id = id;
@@ -100,6 +100,10 @@ public class EditApplication : IFeature
 
         [SwaggerSchema(Description = FeatureConstants.OdsInstanceIdsDescription, Nullable = false)]
         public IEnumerable<int>? OdsInstanceIds { get; set; }
+
+        [SwaggerOptional]
+        [SwaggerSchema(Description = FeatureConstants.Enable)]
+        public bool? Enabled { get; set; }
     }
 
     public class Validator : AbstractValidator<IEditApplicationModel>

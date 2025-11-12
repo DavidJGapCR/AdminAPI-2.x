@@ -3,35 +3,34 @@
 // The Ed-Fi Alliance licenses this file to you under the Apache License, Version 2.0.
 // See the LICENSE and NOTICES files in the project root for more information.
 
-using EdFi.Ods.AdminApi.AdminConsole;
-using EdFi.Ods.AdminApi.AdminConsole.Configurations;
+using System.Net;
+using EdFi.Ods.AdminApi.Common.Constants;
 using EdFi.Ods.AdminApi.Common.Infrastructure;
 using EdFi.Ods.AdminApi.Common.Infrastructure.MultiTenancy;
 using EdFi.Ods.AdminApi.Features;
 using EdFi.Ods.AdminApi.Infrastructure;
 using log4net;
+using log4net.Config;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Initialize log4net early so we can use it in Program.cs
+builder.AddLoggingServices();
 
 // logging
 var _logger = LogManager.GetLogger("Program");
 _logger.Info("Starting Admin API");
-var adminConsoleIsEnabled = builder.Configuration.GetValue<bool>("AppSettings:EnableAdminConsoleAPI");
+var adminApiMode = builder.Configuration.GetValue<AdminApiMode>("AppSettings:AdminApiMode", AdminApiMode.V2);
+var databaseEngine = builder.Configuration.GetValue<string>("AppSettings:DatabaseEngine");
 
-//Order is important to enable CORS
-if (adminConsoleIsEnabled)
-    builder.RegisterAdminConsoleCorsDependencies(_logger);
+// Log configuration values as requested
+_logger.InfoFormat("Configuration - ApiMode: {0}, Engine: {1}", adminApiMode, databaseEngine);
 
 builder.AddServices();
 
-if (adminConsoleIsEnabled)
-    builder.RegisterAdminConsoleDependencies();
-
 var app = builder.Build();
-
-//Order is important to enable CORS
-if (adminConsoleIsEnabled)
-    app.UseCorsForAdminConsole();
 
 var pathBase = app.Configuration.GetValue<string>("AppSettings:PathBase");
 if (!string.IsNullOrEmpty(pathBase))
@@ -44,23 +43,40 @@ AdminApiVersions.Initialize(app);
 
 //The ordering here is meaningful: Logging -> Routing -> Auth -> Endpoints
 app.UseMiddleware<RequestLoggingMiddleware>();
-app.UseMiddleware<TenantResolverMiddleware>();
+app.UseMiddleware<AdminApiModeValidationMiddleware>();
+
+if (adminApiMode == AdminApiMode.V2)
+    app.UseMiddleware<TenantResolverMiddleware>();
+
 app.UseRouting();
 app.UseAuthentication();
 app.UseRateLimiter();
 app.UseAuthorization();
 app.MapFeatureEndpoints();
 
-//Map AdminConsole endpoints if the flag is enable
-if (adminConsoleIsEnabled)
-{
-    app.MapAdminConsoleFeatureEndpoints();
-    //Initialize data
-    await app.InitAdminConsoleData();
-}
-
 app.MapControllers();
-app.UseHealthChecks("/health");
+app.UseHealthChecks("/health", new HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+
+        // 200 OK if all are healthy, 503 Service Unavailable if any are unhealthy
+        context.Response.StatusCode = report.Status == HealthStatus.Unhealthy ? (int)HttpStatusCode.ServiceUnavailable : (int)HttpStatusCode.OK;
+
+        var response = new
+        {
+            Status = report.Status.ToString(),
+            Results = report.Entries.GroupBy(x => x.Value.Tags.FirstOrDefault()).Select(x => new
+            {
+                Name = x.Key,
+                Status = x.Min(y => y.Value.Status).ToString()
+            })
+        };
+
+        await context.Response.WriteAsJsonAsync(response);
+    }
+});
 
 if (app.Configuration.GetValue<bool>("SwaggerSettings:EnableSwagger"))
 {
@@ -68,6 +84,4 @@ if (app.Configuration.GetValue<bool>("SwaggerSettings:EnableSwagger"))
     app.DefineSwaggerUIWithApiVersions(AdminApiVersions.GetAllVersionStrings());
 }
 
-app.Run();
-
-
+await app.RunAsync();

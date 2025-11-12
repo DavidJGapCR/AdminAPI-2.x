@@ -18,6 +18,7 @@ public static class FeatureConstants
     public const string ClaimSetNameDescription = "Claim set name";
     public const string ProfileIdDescription = "Profile id";
     public const string EducationOrganizationIdsDescription = "Education organization ids";
+    public const string Enable = "Indicates whether the ApiClient's credetials is enabled. Defaults to true if not provided.";
     public const string ResourceClaimIdDescription = "Resource Claim Id";
     public const string ResourceClaimNameDescription = "Resource Claim Name";
     public const string ResourceClaimsDescription = "Resource Claims";
@@ -27,6 +28,7 @@ public static class FeatureConstants
     public const string EdOrgIdsValidationMessage = "Please provide at least one education organization id.";
     public const string VendorIdValidationMessage = "Please provide valid vendor id.";
     public const string ClaimSetAlreadyExistsMessage = "A claim set with this name already exists in the database. Please enter a unique name.";
+    public const string TenantAlreadyExistsMessage = "A tenant with this name already exists. Please enter a unique name.";
     public const string ClaimSetNameMaxLengthMessage = "The claim set name must be less than 255 characters.";
     public const string ClaimSetNotFound = "No such claim set exists in the database.";
     public const string InvalidResourceClaimActions = "Please provide a valid resourceClaimActions object.";
@@ -47,6 +49,7 @@ public static class FeatureConstants
     public const string OdsInstanceDerivativeCombinedKeyMustBeUnique = "The combined key ODS instance id and derivative type must be unique.";
     public const string OdsInstanceContextCombinedKeyMustBeUnique = "The combined key ODS instance id and context key must be unique.";
     public const string OdsInstanceConnectionStringInvalid = "The connection string is not valid.";
+    public const string TenantConnectionStringInvalid = "The connection string is not valid.";
     public const string OdsInstanceDerivativeIdDescription = "ODS instance derivative id.";
     public const string OdsInstanceDerivativeOdsInstanceIdDescription = "ODS instance derivative ODS instance id.";
     public const string OdsInstanceDerivativeDerivativeTypeDescription = "derivative type.";
@@ -59,4 +62,10 @@ public static class FeatureConstants
     public const string ClientSecretValidationMessage = "ClientSecret must contain at least one lowercase letter, one uppercase letter, one number, and one special character, and must be 32 to 128 characters long.";
     public const string ActionIdDescription = "Action id";
     public const string ActionNameDescription = "Action name";
+
+    public const string ApiClientNameDescription = "Api client name";
+    public const string ApiClientIsApprovedDescription = "Is approved";
+    public const string ApiClientApplicationIdDescription = "Application id";
+    public const string ApiClientNameLengthValidationMessage = "The Api Client Name {Name} would be too long for Admin App to set up necessary ApiClient records." +
+                        " Consider shortening the name by {ExtraCharactersInName} character(s).";
 }

@@ -15,8 +15,8 @@ public class AdminApiVersions
 {
     private static bool _isInitialized;
 
+    public static readonly AdminApiVersion V1 = new(1.1, "v1");
     public static readonly AdminApiVersion V2 = new(2.0, "v2");
-    public static readonly AdminApiVersion AdminConsole = new(1.0, "adminconsole");
     private static ApiVersionSet? _versionSet;
 
     public static void Initialize(WebApplication app)
@@ -24,19 +24,11 @@ public class AdminApiVersions
         if (_isInitialized)
             throw new InvalidOperationException("Versions are already initialized");
 
-        if (app.Configuration.GetValue<bool>("AppSettings:EnableAdminConsoleAPI"))
-        {
-            _versionSet = app.NewApiVersionSet()
-                .HasApiVersion(V2.Version)
-                .HasApiVersion(AdminConsole.Version)
-                .Build();
-        }
-        else
-        {
-            _versionSet = app.NewApiVersionSet()
-                .HasApiVersion(V2.Version)
-                .Build();
-        }
+        _versionSet = app.NewApiVersionSet()
+            .HasApiVersion(V1.Version)
+            .HasApiVersion(V2.Version)
+            .Build();
+
         _isInitialized = true;
     }
 
@@ -58,10 +50,9 @@ public class AdminApiVersions
 
     public static string[] GetAllVersionStrings()
     {
-        var result = GetAllVersions()
+        return GetAllVersions()
             .Select(apiVersion => apiVersion.ToString())
             .ToArray();
-        return result;
     }
 
     public class AdminApiVersion(double version, string displayName)

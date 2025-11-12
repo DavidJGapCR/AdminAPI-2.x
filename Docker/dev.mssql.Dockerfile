@@ -7,33 +7,30 @@
 # code. The next two layers use the dotnet/aspnet image to run the built code.
 # The extra layers in the middle support caching of base layers.
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0.403-alpine3.20@sha256:07cb8622ca6c4d7600b42b2eccba968dff4b37d41b43a9bf4bd800aa02fab117 AS build
-RUN apk upgrade --no-cache && apk add --no-cache musl=~1.2.5-r1
+FROM mcr.microsoft.com/dotnet/sdk:8.0.415-alpine3.21@sha256:f308a8fe0941a318421d18a0917b344d15d18996173a2db6f908a12b8db6b074 AS build
+RUN apk upgrade --no-cache && apk add --no-cache musl=~1.2.5-r9
 ARG ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-"Production"}
 
 WORKDIR /source
+COPY --from=assets ./Application/NuGet.Config ./
+COPY --from=assets ./Application/Directory.Packages.props ./
 COPY --from=assets ./Application/NuGet.Config EdFi.Ods.AdminApi/
 COPY --from=assets ./Application/EdFi.Ods.AdminApi EdFi.Ods.AdminApi/
-
-COPY --from=assets ./Application/NuGet.Config EdFi.Ods.AdminApi.AdminConsole/
-COPY --from=assets ./Application/EdFi.Ods.AdminApi.AdminConsole EdFi.Ods.AdminApi.AdminConsole/
+RUN rm -f EdFi.Ods.AdminApi/appsettings.Development.json
 
 COPY --from=assets ./Application/NuGet.Config EdFi.Ods.AdminApi.Common/
 COPY --from=assets ./Application/EdFi.Ods.AdminApi.Common EdFi.Ods.AdminApi.Common/
+
+COPY --from=assets ./Application/EdFi.Ods.AdminApi.V1 EdFi.Ods.AdminApi.V1/
 
 WORKDIR /source/EdFi.Ods.AdminApi
 RUN export ASPNETCORE_ENVIRONMENT=$ASPNETCORE_ENVIRONMENT
 RUN dotnet restore && dotnet build -c Release
 RUN dotnet publish -c Release /p:EnvironmentName=$ASPNETCORE_ENVIRONMENT --no-build -o /app/EdFi.Ods.AdminApi
 
-WORKDIR /source/EdFi.Ods.AdminApi.AdminConsole
-RUN export ASPNETCORE_ENVIRONMENT=$ASPNETCORE_ENVIRONMENT
-RUN dotnet restore && dotnet build -c Release
-RUN dotnet publish -c Release /p:EnvironmentName=$ASPNETCORE_ENVIRONMENT --no-build -o /app/EdFi.Ods.AdminApi.AdminConsole
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0.8-alpine3.20-amd64@sha256:98fa594b91cda6cac28d2aae25567730db6f8857367fab7646bdda91bc784b5f AS runtimebase
+FROM mcr.microsoft.com/dotnet/aspnet:8.0.21-alpine3.21-amd64@sha256:61adf767314cc4b6a298dd3bdba46a2f10be37d67c75ad64dc7a89a44df8a228 AS runtimebase
 RUN apk upgrade --no-cache && \
-    apk add dos2unix=~7 bash=~5 gettext=~0 icu=~74 curl musl=~1.2.5-r1 && \
+    apk add dos2unix=~7 bash=~5 gettext=~0 icu=~74 curl musl=~1.2.5-r9 && \
     addgroup -S edfi && adduser -S edfi -G edfi
 
 FROM runtimebase AS setup
@@ -48,8 +45,8 @@ ENV DB_FOLDER=mssql
 WORKDIR /app
 COPY --from=build /app/EdFi.Ods.AdminApi .
 
-COPY --chmod=500 Settings/dev/${DB_FOLDER}/run.sh /app/run.sh
-COPY Settings/dev/log4net.config /app/log4net.txt
+COPY --chmod=500 --from=assets Docker/Settings/dev/${DB_FOLDER}/run.sh /app/run.sh
+COPY --from=assets Docker/Settings/dev/log4net.config /app/log4net.txt
 
 RUN cp /app/log4net.txt /app/log4net.config && \
     dos2unix /app/*.json && \
