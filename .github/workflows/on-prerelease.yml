@@ -31,7 +31,7 @@ jobs:
       - publish-package
     steps:
       - name: Wait 20s
-        # Give Azure Artifacts caching a moment to catch up
+        # Give Azure Artifacts caching a moment to catch up - Ok
         run: sleep 20
 
       - name: Prepare Tags
@@ -52,7 +52,7 @@ jobs:
             # Pre-releases get the tag "pre"
             APITAGS="${{ env.IMAGE_NAME }}:pre"
             DBTAGS="${{ env.DATABASE_IMAGE_NAME }}:pre"
-            DBTAGS6x="${{ env.DATABASE_IMAGE_NAME }}:pre-1.3"
+            DBTAGS6x="${{ env.DATABASE_IMAGE_NAME }}:pre-for-6.2"
           else
             # Releases get the version, plus shortened form for minor release.
             # We are not using shortened form for major or using "latest"
@@ -120,7 +120,7 @@ jobs:
         if: startsWith(github.event.release.tag_name, 'Pre-Release') or startsWith(github.event.release.tag_name, 'v1.')
         with:
           context: "{{defaultContext}}:Docker/Settings/V1/DB-Admin/pgsql"
-          cache-from: type=registry,ref=${{ env.DATABASE_IMAGE_NAME }}:pre-1.3
+          cache-from: type=registry,ref=${{ env.DATABASE_IMAGE_NAME }}:pre-for-6.2
           cache-to: type=inline
           build-args: ADMIN_API_VERSION=${{ steps.prepare-tags.outputs.VERSION }}
           file: Dockerfile
