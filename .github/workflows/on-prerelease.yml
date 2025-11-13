@@ -27,8 +27,6 @@ jobs:
   docker-publish:
     name: Publish to Docker Hub
     runs-on: ubuntu-latest
-    needs:
-      - publish-package
     steps:
       - name: Wait 20s
         # Give Azure Artifacts caching a moment to catch up - Ok
