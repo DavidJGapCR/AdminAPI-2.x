@@ -87,7 +87,7 @@ jobs:
           context: "{{defaultContext}}:Docker/Settings/V2/DB-Admin/pgsql"
           cache-from: type=registry,ref=${{ env.DATABASE_IMAGE_NAME }}:pre
           cache-to: type=inline
-          build-args: ADMIN_API_VERSION=${{ steps.prepare-tags.outputs.VERSION }}
+          build-args: ADMIN_API_VERSION=2.3.0-pre1.15
           file: Dockerfile
           tags: ${{ steps.prepare-tags.outputs.DBTAGS }}
           labels: ${{ steps.metadatabase.outputs.labels }}
@@ -100,7 +100,7 @@ jobs:
           context: "{{defaultContext}}:Docker/Settings/V1/DB-Admin/pgsql"
           cache-from: type=registry,ref=${{ env.DATABASE_IMAGE_NAME }}:pre-for-6.2
           cache-to: type=inline
-          build-args: ADMIN_API_VERSION=${{ steps.prepare-tags.outputs.VERSION }}
+          build-args: ADMIN_API_VERSION=2.3.0-pre1.15
           file: Dockerfile
           tags: ${{ steps.prepare-tags.outputs.DBTAGS6x }}
           labels: ${{ steps.metadatabase.outputs.labels }}
