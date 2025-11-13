@@ -91,7 +91,7 @@ jobs:
           file: Dockerfile
           tags: ${{ steps.prepare-tags.outputs.DBTAGS }}
           labels: ${{ steps.metadatabase.outputs.labels }}
-          push: false
+          push: true
 
       - name: Build and push admin api database image 6.x
         uses: docker/build-push-action@b32b51a8eda65d6793cd0494a773d4f6bcef32dc  # v6.11.0
@@ -104,4 +104,4 @@ jobs:
           file: Dockerfile
           tags: ${{ steps.prepare-tags.outputs.DBTAGS6x }}
           labels: ${{ steps.metadatabase.outputs.labels }}
-          push: false
+          push: true
