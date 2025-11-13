@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Wait 20s
-        # Give Azure Artifacts caching a moment to catch up - Ok
+        # Give Azure Artifacts caching a moment to catch up - Ok x2
         run: sleep 20
 
       - name: Prepare Tags
@@ -74,26 +74,6 @@ jobs:
         with:
           username: ${{ env.DOCKER_USERNAME }}
           password: ${{ env.DOCKER_HUB_TOKEN }}
-
-      - name: Extract metadata (tags, labels) for admin api image
-        id: metaapi
-        uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96  # v5.6.1
-        with:
-          images: ${{ env.IMAGE_NAME }}
-
-      - name: Build and push admin api image
-        uses: docker/build-push-action@b32b51a8eda65d6793cd0494a773d4f6bcef32dc  # v6.11.0
-        with:
-          context: "{{defaultContext}}:Docker"
-          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:pre
-          cache-to: type=inline
-          build-args: |
-            VERSION=${{ steps.prepare-tags.outputs.VERSION }}
-            ADMIN_API_VERSION=${{ steps.prepare-tags.outputs.VERSION }}
-          file: api.pgsql.Dockerfile
-          tags: ${{ steps.prepare-tags.outputs.APITAGS }}
-          labels: ${{ steps.metaapi.outputs.labels }}
-          push: false
 
       - name: Extract metadata (tags, labels) for admin api database image
         id: metadatabase
