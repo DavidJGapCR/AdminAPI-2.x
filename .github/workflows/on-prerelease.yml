@@ -117,7 +117,7 @@ jobs:
 
       - name: Build and push admin api database image 6.x
         uses: docker/build-push-action@b32b51a8eda65d6793cd0494a773d4f6bcef32dc  # v6.11.0
-        if: startsWith(github.event.release.tag_name, 'Pre-Release') or startsWith(github.event.release.tag_name, 'v1.')
+        if: startsWith(github.event.release.tag_name, 'Pre-Release') || startsWith(github.event.release.tag_name, 'v1.')
         with:
           context: "{{defaultContext}}:Docker/Settings/V1/DB-Admin/pgsql"
           cache-from: type=registry,ref=${{ env.DATABASE_IMAGE_NAME }}:pre-for-6.2
