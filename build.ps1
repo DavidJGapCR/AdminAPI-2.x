@@ -227,33 +227,10 @@ function GenerateOpenAPI {
     }
 }
 
-function GenerateOpenAPIAdminConsole {
-    Invoke-Execute {
-        Push-Location $solutionRoot/EdFi.Ods.AdminApi/
-        $outputOpenAPI = "../../docs/api-specifications/openapi-yaml/admin-api-console-$APIVersion.yaml"
-        $dllPath = "./bin/Release/net8.0/EdFi.Ods.AdminApi.dll"
-
-        try {
-            dotnet tool run swagger tofile --output $outputOpenAPI --yaml $dllPath adminconsole
-        }
-        finally {
-            Pop-Location
-        }
-    }
-}
-
 function GenerateDocumentation {
     Invoke-Execute {
         $outputOpenAPI = "docs/api-specifications/openapi-yaml/admin-api-$APIVersion.yaml"
         $outputMD = "docs/api-specifications/markdown/admin-api-$APIVersion-summary.md"
-        widdershins --search false --omitHeader true --code true --summary $outputOpenAPI -o $outputMD
-    }
-}
-
-function GenerateDocumentationAdminConsole {
-    Invoke-Execute {
-        $outputOpenAPI = "docs/api-specifications/openapi-yaml/admin-api-console-$APIVersion.yaml"
-        $outputMD = "docs/api-specifications/markdown/admin-api-console-$APIVersion-summary.md"
         widdershins --search false --omitHeader true --code true --summary $outputOpenAPI -o $outputMD
     }
 }
@@ -283,17 +260,14 @@ function RunTests {
     $testAssemblies | ForEach-Object {
         Write-Output "Executing: dotnet test $($_)"
         Invoke-Execute {
-
-            $coverageArgs = ""
-
-            if ($script:RunCoverageAnalysis) {
-                $coverageArgs = "--collect:""XPlat Code Coverage"""
+            if ($script:RunCoverageAnalysis)
+            {
+                & dotnet test $_ --collect 'XPlat Code Coverage' --logger "trx;LogFileName=$($_).trx" --nologo
             }
-
-            dotnet test $_ `
-                $coverageArgs `
-                --logger "trx;LogFileName=$($_).trx" `
-                --nologo
+            else
+            {
+                & dotnet test $_ --logger "trx;LogFileName=$($_).trx" --nologo
+            }
         }
     }
 }
@@ -436,9 +410,7 @@ function Invoke-GenerateOpenAPIAndMD {
     Invoke-Step { Restore }
     Invoke-Step { Compile }
     Invoke-Step { GenerateOpenAPI }
-    Invoke-Step { GenerateOpenAPIAdminConsole }
     Invoke-Step { GenerateDocumentation }
-    Invoke-Step { GenerateDocumentationAdminConsole }
 }
 
 function Invoke-SetAssemblyInfo {
